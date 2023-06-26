@@ -1,0 +1,120 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{2760090C-6DC5-4C06-A528-3BB44FAF153C}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Demo01_Minimal_Console_App.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Demo02_Fontface_Fontsize.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Demo03_Move_Window.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Demo04_Input_Keyboard.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Demo05_ConsoleMode.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Demo06_Colors.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Demo07_ScreenSave.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Demo08_ASCII_Charachters.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="Demo01_Minimal_Console_App">
+        <MSBuild Projects="Demo01_Minimal_Console_App.dproj"/>
+    </Target>
+    <Target Name="Demo01_Minimal_Console_App:Clean">
+        <MSBuild Projects="Demo01_Minimal_Console_App.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Demo01_Minimal_Console_App:Make">
+        <MSBuild Projects="Demo01_Minimal_Console_App.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Demo02_Fontface_Fontsize">
+        <MSBuild Projects="Demo02_Fontface_Fontsize.dproj"/>
+    </Target>
+    <Target Name="Demo02_Fontface_Fontsize:Clean">
+        <MSBuild Projects="Demo02_Fontface_Fontsize.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Demo02_Fontface_Fontsize:Make">
+        <MSBuild Projects="Demo02_Fontface_Fontsize.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Demo03_Move_Window">
+        <MSBuild Projects="Demo03_Move_Window.dproj"/>
+    </Target>
+    <Target Name="Demo03_Move_Window:Clean">
+        <MSBuild Projects="Demo03_Move_Window.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Demo03_Move_Window:Make">
+        <MSBuild Projects="Demo03_Move_Window.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Demo04_Input_Keyboard">
+        <MSBuild Projects="Demo04_Input_Keyboard.dproj"/>
+    </Target>
+    <Target Name="Demo04_Input_Keyboard:Clean">
+        <MSBuild Projects="Demo04_Input_Keyboard.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Demo04_Input_Keyboard:Make">
+        <MSBuild Projects="Demo04_Input_Keyboard.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Demo05_ConsoleMode">
+        <MSBuild Projects="Demo05_ConsoleMode.dproj"/>
+    </Target>
+    <Target Name="Demo05_ConsoleMode:Clean">
+        <MSBuild Projects="Demo05_ConsoleMode.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Demo05_ConsoleMode:Make">
+        <MSBuild Projects="Demo05_ConsoleMode.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Demo06_Colors">
+        <MSBuild Projects="Demo06_Colors.dproj"/>
+    </Target>
+    <Target Name="Demo06_Colors:Clean">
+        <MSBuild Projects="Demo06_Colors.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Demo06_Colors:Make">
+        <MSBuild Projects="Demo06_Colors.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Demo07_ScreenSave">
+        <MSBuild Projects="Demo07_ScreenSave.dproj"/>
+    </Target>
+    <Target Name="Demo07_ScreenSave:Clean">
+        <MSBuild Projects="Demo07_ScreenSave.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Demo07_ScreenSave:Make">
+        <MSBuild Projects="Demo07_ScreenSave.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Demo08_ASCII_Charachters">
+        <MSBuild Projects="Demo08_ASCII_Charachters.dproj"/>
+    </Target>
+    <Target Name="Demo08_ASCII_Charachters:Clean">
+        <MSBuild Projects="Demo08_ASCII_Charachters.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Demo08_ASCII_Charachters:Make">
+        <MSBuild Projects="Demo08_ASCII_Charachters.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="Demo01_Minimal_Console_App;Demo02_Fontface_Fontsize;Demo03_Move_Window;Demo04_Input_Keyboard;Demo05_ConsoleMode;Demo06_Colors;Demo07_ScreenSave;Demo08_ASCII_Charachters"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="Demo01_Minimal_Console_App:Clean;Demo02_Fontface_Fontsize:Clean;Demo03_Move_Window:Clean;Demo04_Input_Keyboard:Clean;Demo05_ConsoleMode:Clean;Demo06_Colors:Clean;Demo07_ScreenSave:Clean;Demo08_ASCII_Charachters:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="Demo01_Minimal_Console_App:Make;Demo02_Fontface_Fontsize:Make;Demo03_Move_Window:Make;Demo04_Input_Keyboard:Make;Demo05_ConsoleMode:Make;Demo06_Colors:Make;Demo07_ScreenSave:Make;Demo08_ASCII_Charachters:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
