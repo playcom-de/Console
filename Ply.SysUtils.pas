@@ -89,8 +89,8 @@ Type TWindowsCodepages = record
        class function EnumCodePagesProc(CodePage:PWideChar) : Boolean; static; stdcall;
        class function GetCodepageName(Codepage:Cardinal) : String; static;
      public
-       class function GetInstalled(Var CodePageList:TStrings) : Boolean; static;
-       class function GetSupported(Var CodePageList:TStrings) : Boolean; static;
+       class function GetInstalled(Const CodePageList:TStrings) : Boolean; static;
+       class function GetSupported(Const CodePageList:TStrings) : Boolean; static;
        class function GetName(CodePage: Cardinal) : String; static;
      end;
 
@@ -1086,14 +1086,14 @@ begin
   end;
 end;
 
-class function TWindowsCodepages.GetInstalled(Var CodePageList:TStrings) : Boolean;
+class function TWindowsCodepages.GetInstalled(Const CodePageList:TStrings) : Boolean;
 begin
   Result := False;
   FList := TStringList.Create;
   try
     if (EnumSystemCodePagesW(@EnumCodePagesProc,CP_INSTALLED)) then
     begin
-      CodePageList.AddStrings(FList);
+      CodePageList.Assign(FList);
       FList.Clear;
       Result := True;
     end;
@@ -1103,14 +1103,14 @@ begin
   end;
 end;
 
-class function TWindowsCodepages.GetSupported(Var CodePageList:TStrings) : Boolean;
+class function TWindowsCodepages.GetSupported(Const CodePageList:TStrings) : Boolean;
 begin
   Result := False;
   FList := TStringList.Create;
   try
     if (EnumSystemCodePagesW(@EnumCodePagesProc,CP_SUPPORTED)) then
     begin
-      CodePageList.AddStrings(FList);
+      CodePageList.Assign(FList);
       FList.Clear;
       Result := True;
     end;

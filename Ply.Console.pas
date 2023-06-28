@@ -108,10 +108,6 @@ Type
     Function  GetUnderline : Boolean;
     Procedure SetUnderline(Value:Boolean);
   Public
-    {$IFDEF DELPHI10UP}
-    class operator Initialize (out aTextAttr: TTextAttr);
-    {$ENDIF DELPHI10UP}
-    // class operator assign(Value: TTextAttr);
     class operator Implicit(Value: Word): TTextAttr;
     class operator Implicit(Value: tTextAttr): Word;
     Constructor Create(TColor, BColor:Byte); Overload;
@@ -1045,13 +1041,6 @@ begin
   end;
 end;
 
-{$IFDEF DELPHI10UP}
-class operator TTextAttr.Initialize(out aTextAttr: TTextAttr);
-begin
-  aTextAttr.FTextAttr := _TextAttr_Default;
-end;
-{$ENDIF DELPHI10UP}
-
 class operator TTextAttr.Implicit(Value: Word): TTextAttr;
 begin
   Result.Attr := Value;
@@ -1214,7 +1203,7 @@ Var _ConsoleFontName: Array [1.._ConsoleFontNumberMax] of tFontName =
           (* FontSize for "Courier New" *)
          ((x:5;y:8)  ,(x:5;y:12),(x:7;y:14),(x:8;y:16) ,(x:10;y:18),(x:10;y:20),(x:13;y:24),(x:14;y:27),(x:19;y:36)),
           (* FontSize for "Fira Code" *)
-         ((x:5;y:9) ,(x:6;y:12),(x:7;y:13),(x:8;y:16) ,(x:10;y:19),(x:10;y:20),(x:12;y:24),(x:14;y:28),(x:18;y:36)));
+         ((x:5;y:9) ,(x:6;y:12),(x:7;y:13),(x:8;y:16) ,(x:9;y:19),(x:10;y:20),(x:12;y:24),(x:14;y:28),(x:18;y:36)));
 
 (**********************)
 (***** tWorkAreas *****)

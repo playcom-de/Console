@@ -110,11 +110,16 @@ begin
 end;
 
 Procedure Edit_Flags;
-Var Key : Word;
-    OpacityPercent : Byte;
+Var
+  Key : Word;
+  {$IFDEF DELPHI10UP}
+  OpacityPercent : Byte;
+  {$ENDIF DELPHI10UP}
 begin
   Try
+    {$IFDEF DELPHI10UP}
     OpacityPercent := 100;
+    {$ENDIF DELPHI10UP}
     Repeat
       Show_Modes;
       Readkey(Key);

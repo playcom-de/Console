@@ -168,7 +168,7 @@ Type TConsoleString = Record
        Procedure SetAttribute(Index:integer; Value:Word);
      public
        {$IFDEF DELPHI10UP}
-       class operator Assign(Var cString:TConsoleString; Const [ref] Value:TConsoleString);
+       class operator Assign(Var Dest:TConsoleString; Const [ref] Src:TConsoleString);
        class operator Implicit(uString:UnicodeString) : TConsoleString;
        class operator Implicit(cString:TConsoleString) : UnicodeString;
        {$ENDIF DELPHI10UP}
@@ -743,10 +743,10 @@ begin
 end;
 
 {$IFDEF DELPHI10UP}
-class operator TConsoleString.Assign(Var cString:TConsoleString; Const [ref] Value:TConsoleString);
+class operator TConsoleString.Assign(Var Dest:TConsoleString; Const [ref] Src:TConsoleString);
 begin
-  cString.FStrChar := Copy(Value.FStrChar);
-  cString.FStrAttr := Copy(Value.FStrAttr);
+  Dest.FStrChar := Copy(Src.FStrChar);
+  Dest.FStrAttr := Copy(Src.FStrAttr);
 end;
 
 class operator TConsoleString.Implicit(uString:UnicodeString) : TConsoleString;

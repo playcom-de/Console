@@ -102,7 +102,7 @@ Type tFrameWindow = Record
        Procedure SetColorBackground(Const Value: Byte);
      Public
        {$IFDEF DELPHI10UP}
-       class operator Initialize (out aFrameWindow: tFrameWindow);
+       class operator Initialize(out aFrameWindow: tFrameWindow);
        {$ENDIF DELPHI10UP}
        // FFrameAttr: Frame Textcolor and Textbackground
        Property  FrameAttr : TTextAttr Read FFrameAttr Write FFrameAttr;
@@ -1214,9 +1214,6 @@ begin
       ConsoleScreenBuffer[i].Attributes := Crt.TextAttr;
     end;
     WriteConsoleRectangular(Right+1,Top+1,1,(Bottom-Top),ConsoleScreenBuffer);
-
-    // Crt.Window(Right+1,Top+1,Right+2,Bottom);
-    // Clrscr;
   end;
 
   // Create Frame
