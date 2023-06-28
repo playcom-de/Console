@@ -3184,9 +3184,8 @@ begin
   ConsoleLocationMoveDefaultRegistry;
   // Use Default ColorTable
   Console.UseColorTableDefault;
-  {$IFDEF DELPHIXE8DOWN}
-  TextAttr := $07;
-  {$ENDIF DELPHIXE8DOWN}
+  // Set Default TextAttribute
+  TextAttr := _TextAttr_Default;
 end;
 
 begin

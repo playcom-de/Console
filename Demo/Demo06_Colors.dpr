@@ -4,6 +4,8 @@
 
 {$R *.res}
 
+{$I Ply.Defines.inc}
+
 uses
   Crt,
   Ply.Console,
