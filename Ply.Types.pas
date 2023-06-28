@@ -251,8 +251,10 @@ Type
     constructor Create(Const X,Y: Smallint); overload;
     constructor Create(Const Value:TCoord); overload;
     procedure Normalize(MinX:Smallint=1; MinY:Smallint=1);
+    {$IFDEF DELPHI10UP}
     class operator Equal(Lhs, Rhs: TCoord) : Boolean;
     class operator notEqual(Lhs, Rhs: TCoord) : Boolean;
+    {$ENDIF DELPHI10UP}
   end;
 
   TSmallPointHelper = record helper for TSmallPoint
@@ -284,8 +286,10 @@ Type
     constructor Create(Const Rect:TSmallRect; Normalize: Boolean = False); overload;              // copy rect
     constructor Create(const Origin: TCoord; Width, Height: Smallint); overload; // at TPoint of origin with width and height
     constructor Create(const P1, P2: TCoord; Normalize: Boolean = False); overload;  // with corners specified by p1 and p2
+    {$IFDEF DELPHI10UP}
     class operator Equal(Lhs, Rhs: TSmallRect) : Boolean;
     class operator NotEqual(Lhs, Rhs: TSmallRect) : Boolean;
+    {$ENDIF DELPHI10UP}
     procedure NormalizeRect;
     Property Width : Smallint Read GetWidth;
     Property Height : Smallint Read GetHeight;
@@ -294,6 +298,11 @@ Type
     Property BottomRight : TSmallPoint Read GetBottomRight Write SetBottomRight;
   end;
 
+  {$IFDEF DELPHIXE8DOWN}
+  Function TSmallRectEqual(Lhs, Rhs: TSmallRect) : Boolean;
+  {$ENDIF DELPHIXE8DOWN}
+
+Type
   TPointHelper = record helper for TPoint
   private
   public
@@ -349,15 +358,19 @@ Type
 Type TBooleanList = TList<Boolean>;
 Type TIntegerList = TList<Integer>;
 
+{$IFDEF DELPHI10UP}
 Type TBooleanListHelper = Class Helper for TBooleanList
      public
        Function  ToString : String;
      end;
+{$ENDIF}
 
 Type TIntegerListHelper = Class Helper for TIntegerList
      public
        Procedure AddIfnotExists(Const Value:Integer);
+       {$IFDEF DELPHI10UP}
        Function  ToString : String;
+       {$ENDIF DELPHI10UP}
      end;
 
 Const BitValue08 : Array [0..7]  of Byte = (1,2,4,8,16,32,64,128);
@@ -550,6 +563,7 @@ begin
   Y := Max(Y,MinY);
 end;
 
+{$IFDEF DELPHI10UP}
 class operator TCoordHelper.equal(Lhs, Rhs: TCoord) : Boolean;
 begin
   Result := (Lhs.X = Rhs.X) and (Lhs.Y = Rhs.Y);
@@ -559,6 +573,7 @@ class operator TCoordHelper.notEqual(Lhs, Rhs: TCoord) : Boolean;
 begin
   Result := Not(Lhs = Rhs);
 end;
+{$ENDIF DELPHI10UP}
 
 (*************************************)
 (***** TConsoleWindowPointHelper *****)
@@ -704,6 +719,7 @@ begin
   if Normalize then Self.NormalizeRect;
 end;
 
+{$IFDEF DELPHI10UP}
 class operator TSmallRectHelper.equal(Lhs, Rhs: TSmallRect) : Boolean;
 begin
   Result := (Lhs.Left  = Rhs.Left)  and (Lhs.Top    = Rhs.Top)  and
@@ -714,7 +730,7 @@ class operator TSmallRectHelper.notEqual(Lhs, Rhs: TSmallRect) : Boolean;
 begin
   Result := Not(Lhs = Rhs);
 end;
-
+{$ENDIF DELPHI10UP}
 
 procedure TSmallRectHelper.NormalizeRect;
 begin
@@ -731,6 +747,14 @@ begin
     Left  := Left xor Right;
   end
 end;
+
+{$IFDEF DELPHIXE8DOWN}
+  Function TSmallRectEqual(Lhs, Rhs: TSmallRect) : Boolean;
+  begin
+    Result := (Lhs.Left  = Rhs.Left)  and (Lhs.Top    = Rhs.Top)  and
+              (Lhs.Right = Rhs.Right) and (Lhs.Bottom = Rhs.Bottom);
+  end;
+{$ENDIF DELPHIXE8DOWN}
 
 (************************)
 (***** TPointHelper *****)
@@ -866,6 +890,7 @@ begin
   Result := SmallRect.ToStringSize;
 end;
 
+{$IFDEF DELPHI10UP}
 (******************************)
 (***** TBooleanListHelper *****)
 (******************************)
@@ -888,6 +913,7 @@ begin
   Help := Help + ']';
   Result := Help;
 end;
+{$ENDIF DELPHI10UP}
 
 (******************************)
 (***** TIntegerListHelper *****)
@@ -897,6 +923,7 @@ begin
   if (IndexOf(Value)=-1) then Add(Value);
 end;
 
+{$IFDEF DELPHI10UP}
 Function  TIntegerListHelper.ToString : String;
 Var
   i : Integer;
@@ -909,6 +936,7 @@ begin
   end;
   Result := Result + ']';
 end;
+{$ENDIF DELPHI10UP}
 
 (**********************)
 (***** TBoolean32 *****)
@@ -1003,7 +1031,11 @@ end;
 Function  TPlyBoolList.GetCountTrue : Int64;
 Var
   iCount: Int64;
+  {$IFDEF DELPHI10UP}
   i: Int64;
+  {$ELSE}
+  i : Longint;
+  {$ENDIF DELPHI10UP}
 begin
   iCount := 0;
   for I := 0 to FCount-1 do

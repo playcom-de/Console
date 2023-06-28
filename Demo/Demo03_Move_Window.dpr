@@ -30,7 +30,7 @@ begin
       Writeln('Console.Window  │ '+Console.WindowRect.ToStringSize   +' │ '+Console.WindowRect.ToStringRect   +'│');
       Writeln('Crt.WinSize     │ '+Crt.WindSize.ToStringSize         +' │ '+Crt.WindSize.ToStringRect         +'│');
       Writeln;
-      Writeln('(Alt +|-) Console-Font : '+Console.Font.FontText);
+      Writeln('(Ctrl+Alt +|-) Console-Font : '+Console.Font.FontText);
       Writeln('(+|-)     alter Console.Window.Size (lines & coloums)');
       Textcolor(Yellow);
       Writeln('          Observe what happens when the console-window becomes larger than the screen.');

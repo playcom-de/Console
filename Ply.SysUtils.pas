@@ -159,6 +159,9 @@ Type tDirInfos = Class(tObject)
        Procedure SetIncludeSubDirs(Value:Boolean);
        Function  GetDirInfo(Index: Integer) : tDirInfo; Overload;
        Function  GetDirInfo(Index: Integer; Var Value:tDirInfo) : Boolean; Overload;
+       {$IFDEF DELPHIXE8DOWN}
+       Procedure DelDirInfo(Index: Integer);
+       {$ENDIF DELPHIXE8DOWN}
      Public
        // List of files & directories
        DInfos                  : TArray<TDirInfo>;
@@ -217,7 +220,9 @@ Type tDirInfos = Class(tObject)
      end;
 
 Function  GetWindowsMemoryUsage : Longint;
+{$IFDEF DELPHI10UP}
 Function  GetWindowsStartTime : TDateTime;
+{$ENDIF DELPHI10UP}
 Function  GetWindowsStartTime2 : TDateTime;
 
 Type tTimecount = Record
@@ -1067,7 +1072,11 @@ begin
   begin
     if (Length(Codepage)>0) then
     begin
+      {$IFDEF DELPHI10UP}
       CP := StrToUIntDef(CodePage,0);
+      {$ELSE}
+      CP := StrToIntDef(Codepage,0);
+      {$ENDIF DELPHI10UP}
       if (CP>0) then
       begin
         FList.Add(Format('%.5d: %s', [CP, GetCodepageName(CP)]));
@@ -1391,6 +1400,25 @@ begin
   end;
 end;
 
+{$IFDEF DELPHIXE8DOWN}
+Procedure tDirInfos.DelDirInfo(Index: Integer);
+Var
+  i : Integer;
+  Count : Integer;
+begin
+  Count := Length(DInfos);
+  Count := High(DInfos);
+  if (Index<=Count) then
+  begin
+    for i := Index to Count-1 do
+    begin
+      DInfos[i] := DInfos[i+1];
+    end;
+    SetLength(DInfos,Length(DInfos)-1);
+  end;
+end;
+{$ENDIF DELPHIXE8DOWN}
+
 Constructor tDirInfos.Create;
 begin
   Inherited Create;
@@ -1472,7 +1500,11 @@ begin
   begin
     if (AnsiCompareText(DInfos[i].Name,DeleteFileName)=0) then
     begin
+      {$IFDEF DELPHI10UP}
       System.Delete(DInfos,i,1);
+      {$ELSE}
+      DelDirInfo(i);
+      {$ENDIF DELPHI10UP}
       Result := True;
       if not(All) then Exit;
     end;
@@ -1503,7 +1535,11 @@ begin
     {$ENDIF}
     if ((DInfos[i].Size mod RecSize)>0) then
     begin
+      {$IFDEF DELPHI10UP}
       System.Delete(DInfos,i,1);
+      {$ELSE}
+      DelDirInfo(i);
+      {$ENDIF DELPHI10UP}
     end;
   end;
 end;
@@ -1517,7 +1553,11 @@ begin
     begin
       if (FilenameCheckFilter(DInfos[i].Name,FilterFilename,False)) then
       begin
+        {$IFDEF DELPHI10UP}
         System.Delete(DInfos,i,1);
+        {$ELSE}
+        DelDirInfo(i);
+        {$ENDIF DELPHI10UP}
       end;
     end;
   end;
@@ -1532,7 +1572,11 @@ begin
     begin
       if (not(FilenameCheckFilter(DInfos[i].Name,FilterFilename,False))) then
       begin
+        {$IFDEF DELPHI10UP}
         System.Delete(DInfos,i,1);
+        {$ELSE}
+        DelDirInfo(i);
+        {$ENDIF DELPHI10UP}
       end;
     end;
   end;
@@ -1696,7 +1740,11 @@ begin
       Value  := DInfos[i];
       if (eDelete) then
       begin
+        {$IFDEF DELPHI10UP}
         System.Delete(DInfos,i,1);
+        {$ELSE}
+        DelDirInfo(i);
+        {$ENDIF DELPHI10UP}
       end;
       Exit;
     end;
@@ -1799,6 +1847,7 @@ Var SelectItems              : tSelectItems;
     FileSort                 : TFilesort;
     Refresh                  : Boolean;
     ScreenSave               : tScreenSave;
+    HeadLine                 : TConsoleString;
 begin
   ScreenSave.Save;
   Result := False;
@@ -1827,7 +1876,8 @@ begin
         Window(TextSelectTitle,TextSelectBottom);
         SelectItems.ExitOnPgKey := False;
         SelectItems.SortExtern  := True;
-        SelectItems.Select(1,MaxY,TextSelectHeadLine,SelectedItem,Key);
+        HeadLine.Create(TextSelectHeadLine);
+        SelectItems.Select(1,MaxY,HeadLine,SelectedItem,Key);
         if (Key>=_ALT_1) and (Key<=_ALT_4) then
         begin
           Refresh := True;
@@ -1972,10 +2022,12 @@ end;
 // is not reset and may well be several days in the past until a restart is
 // performed after an update, for example.
 
+{$IFDEF DELPHI10UP}
 Function  GetWindowsStartTime : TDateTime;
 begin
   Result := Now - (GetTickCount64/86400000);
 end;
+{$ENDIF DELPHI10UP}
 
 Function  GetWindowsStartTime2 : TDateTime;
 var n1,n2                    : Int64;

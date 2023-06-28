@@ -167,9 +167,11 @@ Type TConsoleString = Record
        Function  GetAttribute(Index:integer) : Word;
        Procedure SetAttribute(Index:integer; Value:Word);
      public
+       {$IFDEF DELPHI10UP}
        class operator Assign(Var cString:TConsoleString; Const [ref] Value:TConsoleString);
        class operator Implicit(uString:UnicodeString) : TConsoleString;
        class operator Implicit(cString:TConsoleString) : UnicodeString;
+       {$ENDIF DELPHI10UP}
        class operator GreaterThan(a, b:TConsoleString) : Boolean;
        class operator LessThan(a, b:TConsoleString) : Boolean;
        class operator Add(a, b:TConsoleString) : TConsoleString;
@@ -179,6 +181,7 @@ Type TConsoleString = Record
        property  Attr[index:integer] : Word Read GetAttribute Write SetAttribute;
        Procedure Init(NewLen:integer; aChar:WideChar=' '; aAttr:Word=_TextAttr_Default); Overload;
        Procedure Init(uString:UnicodeString; Textcolor:Byte=0; Textbackground:Byte=0); Overload;
+       Function  uString : UnicodeString;
        Function  ToUpper : UnicodeString;
        Procedure Clear(cChar:WideChar=' '; cAttr:Word=0); Overload;
        Procedure Clear(x1,x2:Integer;  cChar:WideChar=' '; cAttr:Word=0); Overload;
@@ -739,6 +742,7 @@ begin
      then FStrAttr[Index-1] := Value;
 end;
 
+{$IFDEF DELPHI10UP}
 class operator TConsoleString.Assign(Var cString:TConsoleString; Const [ref] Value:TConsoleString);
 begin
   cString.FStrChar := Copy(Value.FStrChar);
@@ -761,21 +765,40 @@ begin
      then SetString(Result, PChar(@cString.FStrChar[0]), Length(cString.FStrChar))
      else Result := '';
 end;
+{$ENDIF DELPHI10UP}
 
 class operator TConsoleString.GreaterThan(a, b:TConsoleString) : Boolean;
 begin
+  {$IFDEF DELPHI10UP}
   Result := (CompareText(UnicodeString(a),UnicodeString(b))>0);
+  {$ELSE}
+  Result := (CompareText(UnicodeString(a.FStrChar),UnicodeString(b.FStrChar))>0);
+  {$ENDIF DELPHI10UP}
 end;
 
 class operator TConsoleString.LessThan(a, b:TConsoleString) : Boolean;
 begin
+  {$IFDEF DELPHI10UP}
   Result := (CompareText(UnicodeString(a),UnicodeString(b))<0);
+  {$ELSE}
+  Result := (CompareText(UnicodeString(a.FStrChar),UnicodeString(b.FStrChar))<0);
+  {$ENDIF DELPHI10UP}
 end;
 
 class operator TConsoleString.Add(a, b:TConsoleString) : TConsoleString;
+{$IFDEF DELPHIXE8DOWN}
+Var NewAttr : TDynWord;
+{$ENDIF DELPHIXE8DOWN}
 begin
   Result.InitChar(a.StringCopyUnicode+b.StringCopyUnicode);
-  Result.InitAttr(a.FStrAttr+b.FStrAttr);
+  {$IFDEF DELPHIXE8DOWN}
+  SetLength(NewAttr,a.Len+b.Len);
+  if (a.Len>0) then System.Move(a.FStrAttr[0], NewAttr[0], a.Len * SizeOf(a.FStrAttr[0]));
+  if (b.Len>0) then System.Move(b.FStrAttr[0], NewAttr[a.Len], b.Len * Sizeof(b.FStrAttr[0]));
+  Result.InitAttr(NewAttr);
+  {$ELSE}
+  Result.InitAttr(a.FStrAttr + b.FStrAttr);
+  {$ENDIF DELPHIXE8DOWN}
 end;
 
 Constructor TConsoleString.Create(uString:UnicodeString; TColor:Byte=LightGray; BColor:Byte=Black);
@@ -810,9 +833,14 @@ begin
   InitAttr(length(uString),TextAttr.Attr);
 end;
 
+Function  TConsoleString.uString : UnicodeString;
+begin
+  Result := UnicodeString(FStrChar);
+end;
+
 Function  TConsoleString.ToUpper : UnicodeString;
 begin
-  Result := UnicodeString(Self).ToUpper;
+  Result := UnicodeString(FStrChar).ToUpper;
 end;
 
 Procedure TConsoleString.Clear(cChar:WideChar=' '; cAttr:Word=0);
@@ -904,10 +932,9 @@ Var AddStr : TConsoleString;
 begin
   // if ch has an invalid value, then set to space
   if (ch=#0) or (ch='') then ch := #32;
-
   if (len < Count) then
   begin
-    AddStr.Init(Count-Len,ch,GetChar(Len).Attr);
+    AddStr.Init(Count-Len,ch,Attr[Len]);
     Self := Self + AddStr;
   end;
   if (Cut) then Result := StringCopy(1,Count)
@@ -932,7 +959,7 @@ end;
 Function  TConsoleString.StringCopyUnicode(Index:integer=1; Count:integer=-1) : UnicodeString;
 begin
   if (Count=-1) then Count := Length(FStrChar)-Index+1;
-  Result := Copy(Self,Index-1,Count);
+  Result := Copy(UnicodeString(FStrChar),Index-1,Count);
 end;
 
 Procedure TConsoleString.InvertString(Index:Integer=1; Count:Integer=-1);
@@ -1115,7 +1142,7 @@ Procedure tScreen.InvertString(x,y:Integer; Count:Integer);
 begin
   if (y>=1) and (y<Length(FLines)) then
   begin
-    if (x>=1) and (x<Length(FLines[y-1])) then
+    if (x>=1) and (x<FLines[y-1].Len) then
     begin
       FLines[y-1].InvertString(x,Count);
     end;
@@ -1126,7 +1153,7 @@ Procedure tScreen.UnderlineString(x,y:Integer; Count:Integer);
 begin
   if (y>=1) and (y<Length(FLines)) then
   begin
-    if (x>=1) and (x<Length(FLines[y-1])) then
+    if (x>=1) and (x<FLines[y-1].Len) then
     begin
       FLines[y-1].UnderlineString(x,Count);
     end;
@@ -1137,7 +1164,7 @@ Procedure tScreen.OutlineString(x,y:Integer; Count:Integer);
 begin
   if (y>=1) and (y<Length(FLines)) then
   begin
-    if (x>=1) and (x<Length(FLines[y-1])) then
+    if (x>=1) and (x<FLines[y-1].Len) then
     begin
       FLines[y-1].OutlineString(x,Count);
     end;
@@ -2457,7 +2484,7 @@ begin
 end;
 
 Procedure ColorString(x,y,l:Integer; TColor:Byte; BColor:Byte=0);
-Var TextAttr                 : TTextAttr;
+Var TextAttr : TTextAttr;
 begin
   TextAttr.Color(TColor,BColor);
   ColorString(x,y,l,TextAttr);
@@ -3154,9 +3181,12 @@ begin
   CrtAssign(Input);
   Reset(Input);
   // Move ConsoleWindow to startposition
-  ConsoleLocationMoveDefaultRegistry;;
+  ConsoleLocationMoveDefaultRegistry;
   // Use Default ColorTable
   Console.UseColorTableDefault;
+  {$IFDEF DELPHIXE8DOWN}
+  TextAttr := $07;
+  {$ENDIF DELPHIXE8DOWN}
 end;
 
 begin

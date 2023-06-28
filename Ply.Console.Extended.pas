@@ -101,7 +101,9 @@ Type tFrameWindow = Record
        Function  GetColorBackground : Byte;
        Procedure SetColorBackground(Const Value: Byte);
      Public
+       {$IFDEF DELPHI10UP}
        class operator Initialize (out aFrameWindow: tFrameWindow);
+       {$ENDIF DELPHI10UP}
        // FFrameAttr: Frame Textcolor and Textbackground
        Property  FrameAttr : TTextAttr Read FFrameAttr Write FFrameAttr;
        Property  FrameTextColor : Byte Read GetFrameTextcolor Write SetFrameTextColor;
@@ -207,6 +209,9 @@ Type tSelectItems            = Record
        Function  GetItemByIndex(Index:Integer) : tSelectItem;
        Function  GetItemByName(Const sName:String) : tSelectItem;
        Procedure SetItemByIndex(Index:Integer; Value:tSelectItem);
+       {$IFDEF DELPHIXE8DOWN}
+       Procedure DelItem(Index:Integer);
+       {$ENDIF DELPHIXE8DOWN}
      Public
        Procedure   Init;
        Procedure   Done;
@@ -1059,10 +1064,12 @@ begin
   FTextAttr.Textcolor := Value;
 end;
 
-class operator tFrameWindow.Initialize (out aFrameWindow: tFrameWindow);
+{$IFDEF DELPHI10UP}
+class operator tFrameWindow.Initialize(out aFrameWindow: tFrameWindow);
 begin
   aFrameWindow.ClearSettings;
 end;
+{$ENDIF DELPHI10UP}
 
 Procedure tFrameWindow.ClearSettings;
 begin
@@ -1255,6 +1262,9 @@ Procedure Window(X1, Y1, X2, Y2: Integer; Title:String; FrameAttr:TTextAttr;
             TextTopLeft:String=''; TextTopRight:String='');
 Var FWindow : TFrameWindow;
 begin
+  {$IFDEF DELPHIXE8DOWN}
+  FWindow.ClearSettings;
+  {$ENDIF DELPHIXE8DOWN}
   FWindow.TextTitle       := Title;
   FWindow.FrameAttr       := FrameAttr;
   FWindow.TextBottomLeft  := TextBottomLeft;
@@ -1269,6 +1279,9 @@ Procedure Window(X1, Y1, X2, Y2: Integer; Title:String;
             TextTopLeft:String=''; TextTopRight:String='');
 Var FWindow : TFrameWindow;
 begin
+  {$IFDEF DELPHIXE8DOWN}
+  FWindow.ClearSettings;
+  {$ENDIF DELPHIXE8DOWN}
   FWindow.TextTitle       := Title;
   FWindow.FrameAttr       := TextAttrFrameDefault;
   FWindow.TextBottomLeft  := TextBottomLeft;
@@ -1771,7 +1784,7 @@ begin
       end;
       CP_SelectItem.Sort(FPosUp);
       CP_Number := Console.OutputCodepage;
-      if (CP_SelectItem.Select(5,3,80,27,'Select Codepage','','',CP_Number,Key)) then
+      if (CP_SelectItem.Select(5,3,80,27,'Select Codepage','',TConsoleString.Create(''),CP_Number,Key)) then
       begin
         if IsValidCodePage(CP_Number) then
         begin
@@ -1801,14 +1814,14 @@ end;
 procedure tSelectItem.Clear;
 begin
   FPos      := -1;
-  NameLong  := '';
-  NameShort := '';
+  NameLong.Create('');
+  NameShort.Create('');
   SortValue := 0;
 end;
 
 Function  tSelectItem.IsClear : Boolean;
 begin
-  Result := (NameLong='') and (NameShort='');
+  Result := (NameLong.Len=0) and (NameShort.Len=0);
 end;
 
 Function    tSelectItem.SearchName(Short:Boolean) : String;
@@ -1822,9 +1835,9 @@ begin
   Result := '';
   if (LenShort>0) then
   begin
-    Result := StringAlignLeft(LenShort,NameShort,' ',True) + ' : ';
+    Result := StringAlignLeft(LenShort,NameShort.uString,' ',True) + ' : ';
   end;
-  Result := Copy(Result + NameLong,1,LenTotal);
+  Result := Copy(Result + NameLong.uString,1,LenTotal);
 end;
 
 Procedure   tSelectItem.WriteSelection(y:Integer; LenShort:Integer);
@@ -1832,7 +1845,7 @@ begin
   if (LenShort>0) then
   begin
     WriteXY(1,y,NameShort.StringCopy(1,LenShort));
-    WriteXY(LenShort+1,y,NameShort.GetChar(1).Attr,' : ');
+    WriteXY(LenShort+1,y,NameShort.Attr[1],' : ');
     WriteXY(LenShort+4,y,NameLong.StringAlignLeft(MaxX-LenShort-3));
   end else
   begin
@@ -1876,6 +1889,24 @@ begin
   end;
 end;
 
+{$IFDEF DELPHIXE8DOWN}
+Procedure tSelectItems.DelItem(Index:Integer);
+Var
+  i : Integer;
+  Count : Integer;
+begin
+  Count := High(Items);
+  if (Index<=Count) then
+  begin
+    for i := Index to Count-1 do
+    begin
+      Items[i] := Items[i+1];
+    end;
+    SetLength(Items,Length(Items)-1);
+  end;
+end;
+{$ENDIF DELPHIXE8DOWN}
+
 Procedure tSelectItems.Init;
 begin
   SetLength(Items,0);
@@ -1900,7 +1931,12 @@ begin
     NewItem.SortValue := eFPos;
     NewItem.NameLong.Init(eNameLong,eColor);
     NewItem.NameShort.Init(eNameShort,eColor);
+    {$IFDEF DELPHI10UP}
     TAppender<TSelectItem>.Append(Items,NewItem);
+    {$ELSE}
+    SetLength(Items, Length(Items)+1);
+    Items[High(Items)] := NewItem;
+    {$ENDIF DELPHI10UP}
     Result := True;
   Except
     Result := False;
@@ -1916,7 +1952,12 @@ begin
     NewItem.SortValue := eSortValue;
     NewItem.NameLong.Init(eNameLong,eColor);
     NewItem.NameShort.Init(eNameShort,eColor);
+    {$IFDEF DELPHI10UP}
     TAppender<TSelectItem>.Append(Items,NewItem);
+    {$ELSE}
+    SetLength(Items, Length(Items)+1);
+    Items[High(Items)] := NewItem;
+    {$ENDIF DELPHI10UP}
     Result := True;
   Except
     Result := False;
@@ -1930,8 +1971,13 @@ begin
     NewItem.FPos      := eFPos;
     NewItem.SortValue := eFPos;
     NewItem.NameLong  := eNameLong;
-    NewItem.NameShort := '';
+    NewItem.NameShort.Create('');
+    {$IFDEF DELPHI10UP}
     TAppender<TSelectItem>.Append(Items,NewItem);
+    {$ELSE}
+    SetLength(Items, Length(Items)+1);
+    Items[High(Items)] := NewItem;
+    {$ENDIF DELPHI10UP}
     Result := True;
   Except
     Result := False;
@@ -1947,7 +1993,12 @@ begin
     NewItem.SortValue := eSortValue;
     NewItem.NameLong  := eNameLong;
     NewItem.NameShort := eNameShort;
+    {$IFDEF DELPHI10UP}
     TAppender<TSelectItem>.Append(Items,NewItem);
+    {$ELSE}
+    SetLength(Items, Length(Items)+1);
+    Items[High(Items)] := NewItem;
+    {$ENDIF DELPHI10UP}
     Result := True;
   Except
     Result := False;
@@ -1961,7 +2012,11 @@ begin
   begin
     if (Items[i].FPos=eFPos) then
     begin
+      {$IFDEF DELPHI10UP}
       System.Delete(Items,i,1);
+      {$ELSE}
+      DelItem(i);
+      {$ENDIF DELPHI10UP}
     end;
   end;
 end;
@@ -1973,7 +2028,7 @@ begin
   begin
     if (Items[i].FPos=eFPos) then
     begin
-      Items[i].NameLong  := eNameLong;
+      Items[i].NameLong.Create(eNameLong);
     end;
   end;
 end;
@@ -2026,7 +2081,7 @@ begin
   MaxLen := 0;
   for I := 0 to High(Items) do
   begin
-    MaxLen := Max(MaxLen,Length(Items[i].NameShort));
+    MaxLen := Max(MaxLen,Length(Items[i].NameShort.uString));
   end;
   Result := MaxLen;
 end;
@@ -2038,7 +2093,7 @@ begin
   MaxLen := 0;
   for I := 0 to High(Items) do
   begin
-    MaxLen := Max(MaxLen,Length(Items[i].NameLong));
+    MaxLen := Max(MaxLen,Length(Items[i].NameLong.uString));
   end;
   Result := MaxLen;
 end;
@@ -2112,7 +2167,7 @@ begin
   Result := -1;
   for I := 0 to High(Items) do
   begin
-    if (CompareStr(Items[i].NameShort,sNameShort)=0) then
+    if (CompareStr(Items[i].NameShort.uString,sNameShort)=0) then
     begin
       Result := i;
       Exit;
@@ -2126,7 +2181,7 @@ begin
   Result := -1;
   for I := 0 to High(Items) do
   begin
-    if (CompareStr(Items[i].NameLong,sNameLong)=0) then
+    if (CompareStr(Items[i].NameLong.uString,sNameLong)=0) then
     begin
       Result := i;
       Exit;
@@ -2155,8 +2210,8 @@ begin
     SearchString := StringReplaceGermanUmlauts(StringDeleteSpaces(SearchString)).ToUpper;
     for I := 0 to High(Items) do
     begin
-      NameShort := StringReplaceGermanUmlauts(StringDeleteSpaces(Items[i].NameShort)).ToUpper;
-      NameLong  := StringReplaceGermanUmlauts(StringDeleteSpaces(Items[i].NameLong)).ToUpper;
+      NameShort := StringReplaceGermanUmlauts(StringDeleteSpaces(Items[i].NameShort.uString)).ToUpper;
+      NameLong  := StringReplaceGermanUmlauts(StringDeleteSpaces(Items[i].NameLong.uString)).ToUpper;
       if (SearchString=NameShort) or
          (SearchString=NameLong)  then
       begin
@@ -2247,7 +2302,7 @@ begin
     LenShort    := MaxLen_NameShort;
     ItemMax     := Count-1;
     YMax        := Min(ToY,MaxY);
-    if (HeadLine='') then YMin := FromY else YMin := FromY+1;
+    if (HeadLine.Len=0) then YMin := FromY else YMin := FromY+1;
     LinesMax    := YMax-YMin+1;
     YCurrent    := YMin;
     // Set ItemFrom to the preselected value 
@@ -2272,7 +2327,7 @@ begin
         begin
           ItemCurrent := 0;
         end;
-        if (HeadLine<>'') then
+        if (HeadLine.Len<>0) then
         begin
           WriteXY(1,FromY,HeadLine);
         end;
@@ -2460,7 +2515,9 @@ Var ScreenSave : tScreenSave;
     FrameWindow : tFrameWindow;
 begin
   ScreenSave.Save;
+  {$IFDEF DELPHIXE8DOWN}
   FrameWindow.ClearSettings;
+  {$ENDIF DELPHIXE8DOWN}
   FrameWindow.TextColor      := White;
   FrameWindow.TextBackground := Black;
   FrameWindow.FrameAttr      := FrameAttr;

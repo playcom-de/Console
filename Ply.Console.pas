@@ -108,7 +108,9 @@ Type
     Function  GetUnderline : Boolean;
     Procedure SetUnderline(Value:Boolean);
   Public
+    {$IFDEF DELPHI10UP}
     class operator Initialize (out aTextAttr: TTextAttr);
+    {$ENDIF DELPHI10UP}
     // class operator assign(Value: TTextAttr);
     class operator Implicit(Value: Word): TTextAttr;
     class operator Implicit(Value: tTextAttr): Word;
@@ -182,6 +184,9 @@ function SetConsoleBufferInfoEx(hConsoleOutput: THANDLE;
            external Kernel32 Name 'SetConsoleScreenBufferInfoEx';
 
 // WorkAreas: Size(s) in pixel of the monitor(s)/screen(s) conected to this computer
+{$IFDEF DELPHIXE8DOWN}
+Type HMonitor = System.UIntPtr;
+{$ENDIF DELPHIXE8DOWN}
 function GetScaleFactorForMonitor(hMon: HMONITOR; out Scale:Integer): HRESULT; stdcall;
 // function GetThemeSysSize(hTheme: THandle; iSizeId: Integer): Integer; stdcall;
 
@@ -315,8 +320,8 @@ Type tConsoleFont = Class
        Function  GetCurrentFontOld(Var CFont:TConsole_Font_Info) : Boolean; overload;
        // SetCurrentFont: Set CurrentFont
        Procedure SetDefault;
-       Procedure SetCurrentFont(Font:TConFont); overload;
-       Procedure SetCurrentFont(FontNr,FontSize:Byte); overload;
+       Function  SetCurrentFont(Font:TConFont) : Boolean; overload;
+       Function  SetCurrentFont(FontNr,FontSize:Byte) : Boolean; overload;
        Function  FontNumberText : String;
        Function  FontSizeText : String;
        // GetFontText: FontInfo as String - e.g. "2=Consolas | Size : 4 = 9x20"
@@ -464,9 +469,11 @@ Type tConsoleModes = Class
        // StdOut $10|#16 ENABLE_LVB_GRID_WORLDWIDE
        Function  GetLvbGridWorldwide : Boolean;
        Procedure SetLvbGridWorldwide(Const Value:Boolean);
+       {$IFDEF DELPHI10UP}
        // Opacity
        Function  GetOpacity : Byte;
        Procedure SetOpacity(Const Percent:Byte);
+       {$ENDIF DELPHI10UP}
        // FBool32[0]: EnableAsciiCodeInput
        Function  GetAsciiCodeInput : Boolean;
        Procedure SetAsciiCodeInput(Value:Boolean);
@@ -541,7 +548,9 @@ Type tConsoleModes = Class
        Property  LvbGridWorldwide : Boolean Read GetLvbGridWorldwide Write SetLvbGridWorldwide;
        Property  Input : DWord Read FInput;
        Property  Output : DWord Read FOutput;
+       {$IFDEF DELPHI10UP}
        Property  Opacity : Byte Read GetOpacity Write SetOpacity;
+       {$ENDIF DELPHI10UP}
        // EnableAsciiCodeInput: Enable (Ctrl+^) for Ascii-Input-Char
        Property  EnableAsciiCodeInput : Boolean Read GetAsciiCodeInput Write SetAsciiCodeInput;
        // WrapWord: In case of LineWrap, try to find a space to Wrap the line
@@ -896,6 +905,14 @@ Uses
   VCL.Dialogs,
   VCL.Forms;        // Get TWorkAreas from TScreen
 
+{$IFDEF DELPHIXE8DOWN}
+function GetLayeredWindowAttributes(Hwnd: THandle; var pcrKey: COLORREF; var pbAlpha: Byte;
+  var pdwFlags: DWORD): Boolean; external user32 name 'GetLayeredWindowAttributes';
+
+function GetConsoleOriginalTitle(lpConsoleTitle: LPWSTR; nSize: DWORD): DWORD;
+  external kernel32 name 'GetConsoleOriginalTitleW';
+{$ENDIF DELPHIXE8DOWN}
+
 (*********************)
 (***** TTextAttr *****)
 (*********************)
@@ -1028,10 +1045,12 @@ begin
   end;
 end;
 
+{$IFDEF DELPHI10UP}
 class operator TTextAttr.Initialize(out aTextAttr: TTextAttr);
 begin
   aTextAttr.FTextAttr := _TextAttr_Default;
 end;
+{$ENDIF DELPHI10UP}
 
 class operator TTextAttr.Implicit(Value: Word): TTextAttr;
 begin
@@ -1128,7 +1147,7 @@ end;
 Function  GetConBufferInfoEx(Var ConsoleBufferInfoEx:TConsoleBufferinfoEx) : Boolean;
 begin
   FillChar(ConsoleBufferInfoEx,sizeof(ConsoleBufferInfoEx),#0);
-  ConsoleBufferInfoEx.cbSize := sizeof(TConsoleScreenBufferInfoEx);
+  ConsoleBufferInfoEx.cbSize := sizeof(TConsoleBufferinfoEx);
   {$IFDEF FPC}
   if (GetConsoleBufferInfoEx(ConHandleStdOut, @ConsoleBufferInfoEx)) then
   {$ELSE}
@@ -1195,7 +1214,7 @@ Var _ConsoleFontName: Array [1.._ConsoleFontNumberMax] of tFontName =
           (* FontSize for "Courier New" *)
          ((x:5;y:8)  ,(x:5;y:12),(x:7;y:14),(x:8;y:16) ,(x:10;y:18),(x:10;y:20),(x:13;y:24),(x:14;y:27),(x:19;y:36)),
           (* FontSize for "Fira Code" *)
-         ((x:5;y:9) ,(x:6;y:12),(x:7;y:13),(x:8;y:16) ,(x:9;y:19),(x:10;y:20),(x:12;y:24),(x:14;y:28),(x:18;y:36)));
+         ((x:5;y:9) ,(x:6;y:12),(x:7;y:13),(x:8;y:16) ,(x:10;y:19),(x:10;y:20),(x:12;y:24),(x:14;y:28),(x:18;y:36)));
 
 (**********************)
 (***** tWorkAreas *****)
@@ -1591,14 +1610,15 @@ begin
   SetCurrentFont(_ConsoleFontNumberDefault,_ConsoleFontSizeDefault);
 end;
 
-Procedure tConsoleFont.SetCurrentFont(Font:TConFont);
+Function  tConsoleFont.SetCurrentFont(Font:TConFont) : Boolean;
 begin
-  SetCurrentFont(Font.FontNumber,Font.FontSize);
+  Result := SetCurrentFont(Font.FontNumber,Font.FontSize);
 end;
 
-Procedure tConsoleFont.SetCurrentFont(FontNr,FontSize:Byte);
-var NewFont                  : TCONSOLE_FONT_INFOEX;
+Function  tConsoleFont.SetCurrentFont(FontNr,FontSize:Byte) : Boolean;
+var NewFont : TCONSOLE_FONT_INFOEX;
 begin
+  Result := False;
   //SetCurrentConsoleFontEx is available from Windows-Vista and higer
   if (Win32MajorVersion>=6.0) then
   begin
@@ -1613,30 +1633,36 @@ begin
           NewFont.dwFontDimensions := _ConsoleFontDimensions[FontNr,FontSize];
           NewFont.FontWeight       := FW_NORMAL; // 400
           NewFont.FaceName         := _ConsoleFontName[FontNr];
-          if not(SetCurrentConsoleFontEx(ConHandleStdOut,TRUE,NewFont)) then
+          if (SetCurrentConsoleFontEx(ConHandleStdOut,TRUE,NewFont)) then
           begin
-            raise EConsoleApiError.Create('SetCurrentConsoleFontEx;'+SysErrorMessage(GetLastError));
-          end;
-          // This is necessary to avoid wrong data e.g. if you retrive
-          // the size in pixel of the console-window directly after
-          // changing the font-size
-          Sleep(25);
-          // Get System-Settings and store in var "ConsoleFont"
-          GetCurrentFontEx;
-          // If the font is not present on the system, then set it to default font
-          if (NewFont.FaceName<>FConsoleFontEx.FaceName) then
-          begin
-            SetCurrentFont(_ConsoleFontNumberDefault,FontSize);
+            // This is necessary to avoid wrong data e.g. if you retrive
+            // the size in pixel of the console-window directly after
+            // changing the font-size
+            Sleep(25);
+            // Get System-Settings and store in var "ConsoleFont"
+            GetCurrentFontEx;
+            // If the font is not present on the system, then set it to default font
+            if (NewFont.FaceName=FConsoleFontEx.FaceName) then
+            begin
+              Result := True;
+              // Depending on the screen resolution and scaling,
+              // the FontDimensions may differ from the default values.
+              // Adjust values to match the current system configuration.
+              if (NewFont.dwFontDimensions.x<>FConsoleFontEx.dwFontDimensions.x) or
+                 (NewFont.dwFontDimensions.y<>FConsoleFontEx.dwFontDimensions.y) then
+              begin
+                _ConsoleFontDimensions[FontNr,FontSize] := FConsoleFontEx.dwFontDimensions;
+              end;
+            end else
+            // If Font (e.g. Fira Code) not present on system, try MS Gothic
+            if (NewFont.FaceName<>'MS Gothic') then
+            begin
+              _ConsoleFontName[FontNr] := 'MS Gothic';
+              Result := SetCurrentFont(FontNr, FontSize);
+            end;
           end else
           begin
-            // Depending on the screen resolution and scaling,
-            // the FontDimensions may differ from the default values.
-            // Adjust values to match the current system configuration.
-            if (NewFont.dwFontDimensions.x<>FConsoleFontEx.dwFontDimensions.x) or
-               (NewFont.dwFontDimensions.y<>FConsoleFontEx.dwFontDimensions.y) then
-            begin
-              _ConsoleFontDimensions[FontNr,FontSize] := FConsoleFontEx.dwFontDimensions;
-            end;
+            raise EConsoleApiError.Create('SetCurrentConsoleFontEx;'+SysErrorMessage(GetLastError));
           end;
         except
           raise EConsoleApiError.Create('SetCurrentConsoleFontEx;'+SysErrorMessage(GetLastError));
@@ -1713,7 +1739,7 @@ end;
 (************************************)
 function  Console_GetDesktopArea(Var ConsoleDesktopRect:TConsoleDesktopRect): Boolean;
 begin
-  FillChar(ConsoleDesktopRect,sizeof(ConsoleDesktopRect),#0);
+  ConsoleDesktopRect.Clear;
   // user32.dll: GetWindowRect
   if (GetWindowRect(ConHandleWindow,ConsoleDesktopRect)) then
   begin
@@ -1777,7 +1803,6 @@ begin
   // Always load from WinAPI, the user can have the window moved
   // around the screen at any time
   Try
-    CurrentDesktopRect.Clear;
     Console_GetDesktopArea(CurrentDesktopRect);
   Except
     On E : EConsoleApiError do ShowMessage(e.Message);
@@ -1906,14 +1931,15 @@ Var
 begin
   CurDeskRect     := Area;
   DeskFrameSize   := FrameSize;
-  FontsizeCalc.X  := (CurDeskRect.Width -FrameSize.X) div WindowSize.x;
-  FontSizeCalc.Y  := (CurDeskRect.Height-FrameSize.Y) div WindowSize.y;
+  FontsizeCalc.X  := (CurDeskRect.Width -DeskFrameSize.X) div WindowSize.x;
+  FontSizeCalc.Y  := (CurDeskRect.Height-DeskFrameSize.Y) div WindowSize.y;
   Result          := FontSizeCalc;
 end;
 
 (************************)
 (***** tConsoleMode *****)
 (************************)
+{$IFDEF DELPHI10UP}
 Function tConsoleModes.GetOpacity : Byte;
 Var
  crKey: COLORREF;
@@ -1934,6 +1960,7 @@ begin
   FOpacityAlpha := ValueMinMax(Trunc(255*Percent/100),0,255);
   SetLayeredWindowAttributes(ConHandleWindow,crKey,FOpacityAlpha,LWA_ALPHA);
 end;
+{$ENDIF DELPHI10UP}
 
 Function tConsoleModes.GetModeInput : Boolean;
 begin
@@ -3040,7 +3067,6 @@ begin
   end;
 end;
 
-
 Procedure ConsoleLocationMoveDefaultRegistry;
 begin
   if not(ConsoleLocationMoveComputerRegistry) then
@@ -3283,7 +3309,11 @@ begin
         ConsoleInfoEx := tConsoleInfoEx.Create;
         if ConsoleInfoEx.GetInfoEx then
         begin
+          {$IFDEF DELPHI10UP}
           if (WindowRect<>ConsoleInfoEx.WindowRect) then
+          {$ELSE}
+          if (TSmallRectEqual(WindowRect,ConsoleInfoEx.WindowRect)) then
+          {$ENDIF DELPHI10UP}
           begin
             FScreenBufferInfo.srWindow := ConsoleInfoEx.WindowRect;
           end;
@@ -3670,9 +3700,12 @@ begin
   // Current FrameSize according to monitor resulution & scaling
   DeskFrameSize := Desktop.FrameSize;
   // caclulate minimal Window-Size in Char (coloums & lines)
-  WinMinSize.x  := ((DeskSizeMin.X - DeskFrameSize.X) div DeskFontSize.X) + 1;
-  WinMinSize.y  := ((DeskSizeMin.Y - DeskFrameSize.Y) div DeskFontSize.Y) + 1;
-  // Set Size at least to (10,2)
+  if (DeskFontSize.X>0) and (DeskFontSize.Y>0) then
+  begin
+    WinMinSize.x  := ((DeskSizeMin.X - DeskFrameSize.X) div DeskFontSize.X) + 1;
+    WinMinSize.y  := ((DeskSizeMin.Y - DeskFrameSize.Y) div DeskFontSize.Y) + 1;
+  end;
+  // Set Size at least to (20,2)
   WinMinSize.Normalize(20,2);
   Result        := WinMinSize;
 end;

@@ -9,15 +9,17 @@
  ******************************************************************************)
 
 Const
-  // Console-Attribute Hi-Byte from Word
-  // COMMON_LVB_LEADING_BYTE    = $0100;
-  // COMMON_LVB_TRAILING_BYTE   = $0200;
-  // COMMON_LVB_GRID_HORIZONTAL = $0400;
-  // COMMON_LVB_GRID_LVERTICAL  = $0800;
-  // COMMON_LVB_GRID_RVERTICAL  = $1000;
-  // COMMON_LVB_UNKNOWN         = $2000;
-  // COMMON_LVB_REVERSE_VIDEO   = $4000;
-  // COMMON_LVB_UNDERSCORE      = $8000;
+  {$IFDEF DELPHIXE8DOWN}
+    // Console-Attribute Hi-Byte from Word
+    COMMON_LVB_LEADING_BYTE    = $0100;
+    COMMON_LVB_TRAILING_BYTE   = $0200;
+    COMMON_LVB_GRID_HORIZONTAL = $0400;
+    COMMON_LVB_GRID_LVERTICAL  = $0800;
+    COMMON_LVB_GRID_RVERTICAL  = $1000;
+    COMMON_LVB_UNKNOWN         = $2000;
+    COMMON_LVB_REVERSE_VIDEO   = $4000;
+    COMMON_LVB_UNDERSCORE      = $8000;
+  {$ENDIF DELPHIXE8DOWN}
 
   // Values for dwControllKeyState
   _CKS_NONE                  = $0000;
