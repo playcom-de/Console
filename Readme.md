@@ -61,3 +61,5 @@ Contributions are welcome, either as Pull Requests or bug reports. If you want t
 ![Demo07](Pictures/Demo07_ScreenSave.jpg)
 
 ![Demo08](Pictures/Demo08_ASCII_Characters.jpg)
+
+![Demo08](Pictures/Demo09_BuiltIn_Features.jpg)

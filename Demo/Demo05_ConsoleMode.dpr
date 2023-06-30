@@ -7,7 +7,7 @@
 {$I Ply.Defines.inc}
 
 uses
-  crt,
+  Crt in '..\Crt.pas',
   Ply.Console,
   Ply.Console.Extended,
   Ply.StrUtils,
@@ -51,9 +51,9 @@ begin
   WriteXY( 1, 1,TextAttrHead,'Appearance properties');
   WriteXY( 1, 2,'(1) Cursor-Visible            : '+BoolToStringYesNo(Console.CursorVisible));
   WriteXY( 1, 3,'(2) Cursor-Size               : '+IntToString(Console.CursorSize)); ClrEol;
-  {$IFDEF DELPHI10UP}
+  {$IFDEF CONSOLEOPACITY}
   WriteXY( 1, 4,'(3) Opacity in %              : '+IntToString(Console.Modes.Opacity));
-  {$ENDIF DELPHI10UP}
+  {$ENDIF CONSOLEOPACITY}
   WriteXY(40, 1,TextAttrHead,'Crt extended features');
   WriteXY(40, 2,'(4) UseAlternateWriteProc     : '+BoolToStringYesNo(Console.Modes.UseAlternateWriteProc));
   WriteXY(40, 3,'(5) EnableAsciiCodeInput      : '+BoolToStringYesNo(Console.Modes.EnableAsciiCodeInput));
@@ -114,14 +114,14 @@ end;
 Procedure Edit_Flags;
 Var
   Key : Word;
-  {$IFDEF DELPHI10UP}
+  {$IFDEF CONSOLEOPACITY}
   OpacityPercent : Byte;
-  {$ENDIF DELPHI10UP}
+  {$ENDIF CONSOLEOPACITY}
 begin
   Try
-    {$IFDEF DELPHI10UP}
+    {$IFDEF CONSOLEOPACITY}
     OpacityPercent := 100;
-    {$ENDIF DELPHI10UP}
+    {$ENDIF CONSOLEOPACITY}
     Repeat
       Show_Modes;
       Readkey(Key);
@@ -132,7 +132,7 @@ begin
            then Console.CursorSize := Min(Console.CursorSize+5,100)
            else Console.CursorSize := 25;
       end else
-      {$IFDEF DELPHI10UP}
+      {$IFDEF CONSOLEOPACITY}
       if (Key=_3) then
       begin
         if (OpacityPercent>0)
@@ -140,7 +140,7 @@ begin
            else OpacityPercent := 100;
         Console.Modes.Opacity := OpacityPercent;
       end else
-      {$ENDIF DELPHI10UP}
+      {$ENDIF CONSOLEOPACITY}
       if (Key=_4) then Console.Modes.UseAlternateWriteProc     := not(Console.Modes.UseAlternateWriteProc)    else
       if (Key=_5) then Console.Modes.EnableAsciiCodeInput      := not(Console.Modes.EnableAsciiCodeInput)     else
       if (Key=_6) then Console.Modes.WrapWord                  := not(Console.Modes.WrapWord)                 else

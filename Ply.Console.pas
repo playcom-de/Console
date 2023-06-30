@@ -389,8 +389,10 @@ Type tConsoleModes = Class
        FOutput : DWord;
        // FBool32: EnableAsciiCodeInput
        FBool32 : TBoolean32;
+       {$IFDEF CONSOLEOPACITY}
        // FOpacity: opacity and transparency
        FOpacityAlpha : Byte;
+       {$ENDIF CONSOLEOPACITY}
        // GetConsoleMode & SetConsoleMode
        Function  GetModeInput : Boolean;
        Function  GetModeOutput : Boolean;
@@ -465,11 +467,11 @@ Type tConsoleModes = Class
        // StdOut $10|#16 ENABLE_LVB_GRID_WORLDWIDE
        Function  GetLvbGridWorldwide : Boolean;
        Procedure SetLvbGridWorldwide(Const Value:Boolean);
-       {$IFDEF DELPHI10UP}
+       {$IFDEF CONSOLEOPACITY}
        // Opacity
        Function  GetOpacity : Byte;
        Procedure SetOpacity(Const Percent:Byte);
-       {$ENDIF DELPHI10UP}
+       {$ENDIF CONSOLEOPACITY}
        // FBool32[0]: EnableAsciiCodeInput
        Function  GetAsciiCodeInput : Boolean;
        Procedure SetAsciiCodeInput(Value:Boolean);
@@ -544,9 +546,9 @@ Type tConsoleModes = Class
        Property  LvbGridWorldwide : Boolean Read GetLvbGridWorldwide Write SetLvbGridWorldwide;
        Property  Input : DWord Read FInput;
        Property  Output : DWord Read FOutput;
-       {$IFDEF DELPHI10UP}
+       {$IFDEF CONSOLEOPACITY}
        Property  Opacity : Byte Read GetOpacity Write SetOpacity;
-       {$ENDIF DELPHI10UP}
+       {$ENDIF CONSOLEOPACITY}
        // EnableAsciiCodeInput: Enable (Ctrl+^) for Ascii-Input-Char
        Property  EnableAsciiCodeInput : Boolean Read GetAsciiCodeInput Write SetAsciiCodeInput;
        // WrapWord: In case of LineWrap, try to find a space to Wrap the line
@@ -662,7 +664,7 @@ Type tConsoleLocationUser = record
        Property  Position[Index:Integer]:TConsoleDesktopPoint Read GetPosition Write SetPosition;
      end;
 
-Procedure ConsoleLocationMoveUserRegistry(Index:Integer; SetDefault:Boolean=True);
+Function  ConsoleLocationMoveUserRegistry(Index:Integer; SetDefault:Boolean=True) : Boolean;
 Procedure ConsoleLocationSaveUserRegistry(Index:Integer);
 Procedure ConsoleLocationMoveDefaultRegistry;
 
@@ -1928,7 +1930,7 @@ end;
 (************************)
 (***** tConsoleMode *****)
 (************************)
-{$IFDEF DELPHI10UP}
+{$IFDEF CONSOLEOPACITY}
 Function tConsoleModes.GetOpacity : Byte;
 Var
  crKey: COLORREF;
@@ -1949,7 +1951,7 @@ begin
   FOpacityAlpha := ValueMinMax(Trunc(255*Percent/100),0,255);
   SetLayeredWindowAttributes(ConHandleWindow,crKey,FOpacityAlpha,LWA_ALPHA);
 end;
-{$ENDIF DELPHI10UP}
+{$ENDIF CONSOLEOPACITY}
 
 Function tConsoleModes.GetModeInput : Boolean;
 begin
@@ -2508,7 +2510,9 @@ begin
   FBool32.Clear;
   // FBool32[3]: UseAlternateWriteProc -> Default=True
   FBool32[3] := True;
+  {$IFDEF CONSOLEOPACITY}
   FOpacityAlpha := 255;
+  {$ENDIF CONSOLEOPACITY}
 end;
 
 Procedure tConsoleModes.GetCurrentMode;
@@ -2549,6 +2553,10 @@ begin
   ExtendedEditKey := False;
   // TrimLeadingZeros off by default
   TrimLeadingZeros := False;
+  {$ifdef CONSOLEOPACITY}
+  // Set Opacity to 100%
+  Opacity := 100;
+  {$endif CONSOLEOPACITY}
 end;
 
 (****************************)
@@ -3017,9 +3025,10 @@ begin
   end;
 end;
 
-Procedure ConsoleLocationMoveUserRegistry(Index:Integer; SetDefault:Boolean=True);
+Function  ConsoleLocationMoveUserRegistry(Index:Integer; SetDefault:Boolean=True) : Boolean;
 Var ConsoleLocationUser      : tConsoleLocationUser;
 begin
+  Result := False;
   if (Index>=0) and (Index<=9) then
   begin
     if (ConsoleLocationUser.LoadFromRegistry(Index)) then
@@ -3032,6 +3041,7 @@ begin
         Console.Desktop.Position := ConsoleLocationUser.Position[Index];
         // autofit position if out of bounds
         ConsoleLocationUser.ConsoleLocation[Index].AutofitPosition;
+        Result := True;
         Exit;
       end;
     end;

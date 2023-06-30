@@ -7,7 +7,7 @@
 {$I Ply.Defines.inc}
 
 uses
-  Crt,
+  Crt in '..\Crt.pas',
   Ply.Console,
   Ply.Console.Extended,
   Ply.StrUtils,

@@ -344,17 +344,17 @@ Procedure CrtReadln(Var uString:UnicodeString);
 
 Const
   // (Ctrl+Alt+0..9) MoveConsoleWindow to UserPosition
-  Proc_CTRL_ALT_0_9   : Procedure(Index:Integer; SetDefault:Boolean=True) = Nil;
+  Proc_CTRL_ALT_0_9   : Function(Index:Integer; SetDefault:Boolean=True) : Boolean = Nil;
   // (Ctrl+AltGr+0..9) SaveConsoleWindow to UserPosition
   Proc_CTRL_ALTGR_0_9 : Procedure(Index:Integer) = Nil;
-  Proc_CTRL_ALT_L     : Procedure = Nil;  // ScreenSelectFromFile in Ply.Screen.pas
+  Proc_CTRL_ALT_L     : Procedure = Nil;  // ScreenSelectFromFile in Ply.Console.Extended.pas
   Proc_CTRL_ALT_M     : Procedure = Nil;
   Proc_CTRL_ALT_N     : Procedure = Nil;
   Proc_CTRL_ALT_O     : Procedure = Nil;
   Proc_CTRL_ALT_P     : Procedure = Nil;
   Proc_CTRL_ALT_Q     : Procedure = Nil;
   Proc_CTRL_ALT_R     : Procedure = Nil;
-  Proc_CTRL_ALT_S     : Procedure = Nil;  // ScreenSaveToFile in Ply.Screen.pas
+  Proc_CTRL_ALT_S     : Procedure = Nil;  // ScreenSaveToFile in Ply.Console.Extended.pas
   Proc_CTRL_ALT_T     : Procedure = Nil;
   Proc_CTRL_ALT_U     : Procedure = Nil;
 
@@ -2758,6 +2758,8 @@ begin
             case buf.Event.KeyEvent.wVirtualKeyCode of
               _VKC_TAB                            : RKW := _CTRL_ALT_TAB;
               _VKC_RETURN                         : RKW := _CTRL_ALT_Return;
+              _VKC_PLUS                           : RKW := _CTRL_ALT_Plus;
+              _VKC_MINUS                          : RKW := _CTRL_ALT_Minus;
               _VKC_0        .. _VKC_9             : RKW := $CD00 + buf.Event.KeyEvent.wVirtualKeyCode;
               _VKC_A        .. _VKC_Z             : RKW := $CD00 + buf.Event.KeyEvent.wVirtualKeyCode;
               _VKC_0_NumPad .. _VKC_DIVIDE_NumPad : RKW := $CD00 + buf.Event.KeyEvent.wVirtualKeyCode;

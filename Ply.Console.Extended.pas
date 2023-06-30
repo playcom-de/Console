@@ -70,7 +70,7 @@ Type TConsoleLocationUserHelper = record helper for tConsoleLocationUser
      end;
 
 Function  ConsoleLocationMoveComputer : Boolean;
-Procedure ConsoleLocationMoveUser(Index:Integer; SetDefault:Boolean=True);
+Function  ConsoleLocationMoveUser(Index:Integer; SetDefault:Boolean=True) : Boolean;
 Procedure ConsoleLocationSaveUser(Index:Integer);
 // ConsoleLocationMoveDefault: Set the console window to the position of the
 //   computer if given, otherwise set it to the position[0] of the user if given.
@@ -928,9 +928,10 @@ begin
   end;
 end;
 
-Procedure ConsoleLocationMoveUser(Index:Integer; SetDefault:Boolean=True);
+Function  ConsoleLocationMoveUser(Index:Integer; SetDefault:Boolean=True) : Boolean;
 Var ConsoleLocationUser      : tConsoleLocationUser;
 begin
+  Result := False;
   if (Index>=0) and (Index<=9) then
   begin
     if (ConsoleLocationUser.LoadFromFile) then
@@ -943,6 +944,7 @@ begin
         Console.Desktop.Position := ConsoleLocationUser.Position[Index];
         // autofit position if out of bounds
         ConsoleLocationUser.ConsoleLocation[Index].AutofitPosition;
+        Result := True;
         Exit;
       end;
     end;
@@ -956,6 +958,7 @@ begin
         Console.Desktop.Position := ConsoleLocationUser.Position[Index];
         // autofit position if out of bounds
         ConsoleLocationUser.ConsoleLocation[Index].AutofitPosition;
+        Result := True;
         Exit;
       end;
     end;
@@ -2560,12 +2563,16 @@ begin
 end;
 
 Procedure ScreenSelectFromFile;
-Var ScreenSave : TScreenSave;
+Var
+  ScreenSaveCurrent : TScreenSave;
+  ScreenSaveShow : TScreenSave;
 begin
-  if (ScreenSave.SelectFromFile) then
+  ScreenSaveCurrent.Save; // Save current screen to restore afterwards
+  if (ScreenSaveShow.SelectFromFile) then
   begin
-    ScreenSave.Restore;
+    ScreenSaveShow.Restore;
     Readkey;
+    ScreenSaveCurrent.Restore;
   end;
 end;
 

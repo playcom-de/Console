@@ -35,7 +35,10 @@
 
   {$if CompilerVersion >= 30}     // >= Delphi 10 Seatle and up
     {$define DELPHI10UP}
+    {$define CONSOLEOPACITY}
   {$else}
     {$define DELPHIXE8DOWN}       // <= Delphi XE8 and down
   {$ifend}
+
+
 
