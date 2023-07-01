@@ -16,6 +16,7 @@ uses
 procedure Console_Demo09_BuiltIn;
 Var
   Key : Word;
+  FrameAttr : TTextAttr;
 begin
   // Set Console-Window-Size to whatever size you want
   Console.Window(100,36);
@@ -47,7 +48,7 @@ begin
   // Create a framed Crt.Window within which the output takes place. There
   // are 4 overloaded procedures to create windows with a frame If you
   // leave the size-information, the window will fill current Console.Window
-  Var FrameAttr := TTextAttr.Create(White, Red);
+  FrameAttr.Create(White, Red);
   Window('Window-Title', FrameAttr, 'Text-Bottom-Left'
     , 'Text-Bottom-Right', 'Text-Top-Left', 'Text-Top-Right');
   Writeln('The workspace (crt.window) is smaller than the console window by 2 '

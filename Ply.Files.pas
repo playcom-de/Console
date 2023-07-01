@@ -49,7 +49,7 @@ Type tFileMode   = Longword;   { unsigned 32-Bit-Integer on Win32 | unsigned 64-
 Var FileLastError : Longint = 0;
     FileDebugMode : Boolean = False;
 
-Type tFile = object
+Type tPlyFile = object
      Private
        f : File;
        Function GetFileName : String;
@@ -80,7 +80,7 @@ Type tFile = object
        Procedure Close_Delete;
      end;
 
-Type tTextfile = Object
+Type tPlyTextfile = Object
      Private
        tf : Text;
        Function  GetFilename : String;
@@ -535,38 +535,38 @@ end;
 (*******************************)
 (***** tFile - Declaration *****)
 (*******************************)
-Function  tFile.GetFileName: string;
+Function  tPlyFile.GetFileName: string;
 begin
   Result := tFilerec(f).Name;
 end;
 
-Procedure tFile.Init;
+Procedure tPlyFile.Init;
 begin
   FillChar(tFilerec(f),sizeof(tFilerec),#0);
 end;
 
-Function  tFile.Open(aFileName:String; aRecSize:tRecSize; aFileMode:tFileMode=fmShare) : Boolean;
+Function  tPlyFile.Open(aFileName:String; aRecSize:tRecSize; aFileMode:tFileMode=fmShare) : Boolean;
 begin
   Init;
   Result := FileOpen(f,aFileName,aRecSize,aFileMode);
 end;
 
-Function  tFile.Handle : tHandle;
+Function  tPlyFile.Handle : tHandle;
 begin
   Result := tFilerec(f).Handle;
 end;
 
-Function  tFile.Mode : tFilemode;
+Function  tPlyFile.Mode : tFilemode;
 begin
   Result := tFilerec(f).Mode;
 end;
 
-Function  tFile.RecSize : Int64;
+Function  tPlyFile.RecSize : Int64;
 begin
   Result := tFilerec(f).RecSize;
 end;
 
-Function  tFile.IsOpen : Boolean;
+Function  tPlyFile.IsOpen : Boolean;
 Var FMode : tFileMode;
 begin
   FMode := Mode;
@@ -576,7 +576,7 @@ begin
                       else Result := False;
 end;
 
-Function  tFile.Eof : Boolean;
+Function  tPlyFile.Eof : Boolean;
 begin
   if (IsOpen) then
   begin
@@ -587,7 +587,7 @@ begin
   end;
 end;
 
-Function  tFile.Filepos : Longint;
+Function  tPlyFile.Filepos : Longint;
 begin
   if (IsOpen) then
   begin
@@ -598,7 +598,7 @@ begin
   end;
 end;
 
-Function  tFile.Filesize : Longint;
+Function  tPlyFile.Filesize : Longint;
 begin
   if (IsOpen) then
   begin
@@ -609,7 +609,7 @@ begin
   end;
 end;
 
-Function  tFile.Seek(FPos:Longint) : Boolean;
+Function  tPlyFile.Seek(FPos:Longint) : Boolean;
 Var FSize                    : Longint;
 begin
   if (FPos<0) then FPos := 0 else
@@ -624,7 +624,7 @@ begin
   Result  := (FileLastError=0);
 end;
 
-Function  tFile.DosRead(Var Daten) : Boolean;
+Function  tPlyFile.DosRead(Var Daten) : Boolean;
 Var NumRead                  : integer;
 begin
   if not(Eof) then
@@ -641,7 +641,7 @@ begin
   end;
 end;
 
-Function  tFile.BlockRead(Var Daten; RecCount:tRecCount; Out ReadRec:tRecCount) : Boolean;
+Function  tPlyFile.BlockRead(Var Daten; RecCount:tRecCount; Out ReadRec:tRecCount) : Boolean;
 Var CountByte                : Int64;
     Steps                    : Int64;
     RecCountStep             : Int64;
@@ -663,7 +663,7 @@ begin
       FileLastError := IOResult;
       if (FileLastError<>0) then
       begin
-        ShowFileErrorMessage('tFile.BlockRead'
+        ShowFileErrorMessage('tPlyFile.BlockRead'
           ,FileName
           ,'RecCount: '+IntToString(RecCount,5)+'  RecSize: ' +IntToString(RecSize,5)
           +'ReadRec : '+IntToString(ReadRec,5) +'  FileSize: '+IntToString(Filesize,5));
@@ -695,7 +695,7 @@ begin
       until (Count_Steps>=Steps) or (ReadRec_Total>=RecCount) or (FileLastError<>0);
       if (FileLastError<>0) then
       begin
-        ShowFileErrorMessage('tFile.BlockRead Steps'
+        ShowFileErrorMessage('tPlyFile.BlockRead Steps'
           ,FileName
           ,'RecCount: '+IntToString(RecCount,5)+'  RecSize: ' +IntToString(RecSize,5)
           +'ReadRec : '+IntToString(ReadRec,5) +'  FileSize: '+IntToString(Filesize,5));
@@ -710,7 +710,7 @@ begin
   end;
 end;
 
-Function  tFile.DosWrite(Var Daten) : Boolean;
+Function  tPlyFile.DosWrite(Var Daten) : Boolean;
 Var NumWritten               : tRecCount;
 begin
   {$I-}
@@ -720,7 +720,7 @@ begin
   DosWrite := (FileLastError=0);
 end;
 
-Function  tFile.BlockWrite(Var Daten; RecCount:tRecCount; Out WrittenRec:tRecCount) : Boolean;
+Function  tPlyFile.BlockWrite(Var Daten; RecCount:tRecCount; Out WrittenRec:tRecCount) : Boolean;
 Var CountByte                : Int64;
     Steps                    : Int64;
     AnzRec_Step              : Int64;
@@ -740,7 +740,7 @@ begin
     FileLastError := IOResult;
     if (FileLastError<>0) then
     begin
-        ShowFileErrorMessage('tFile.BlockWrite'
+        ShowFileErrorMessage('tPlyFile.BlockWrite'
           ,FileName
           ,'RecCount: '+IntToString(RecCount,5)   +'  RecSize: ' +IntToString(RecSize,5)
           +'ReadRec : '+IntToString(WrittenRec,5) +'  FileSize: '+IntToString(Filesize,5));
@@ -770,7 +770,7 @@ begin
     until (Count_Steps>=Steps) or (WriteRec_Total>=RecCount) or (FileLastError<>0);
     if (FileLastError<>0) then
     begin
-      ShowFileErrorMessage('tFile.BlockWrite Steps'
+      ShowFileErrorMessage('tPlyFile.BlockWrite Steps'
         ,FileName
         ,'RecCount: '+IntToString(RecCount,5)   +'  RecSize: ' +IntToString(RecSize,5)
         +'ReadRec : '+IntToString(WrittenRec,5) +'  FileSize: '+IntToString(Filesize,5));
@@ -782,7 +782,7 @@ begin
       BlockWrite := True;
     end else
     begin
-      ShowFileErrorMessage('tFile.BlockWrite Steps'
+      ShowFileErrorMessage('tPlyFile.BlockWrite Steps'
         ,FileName
         ,'RecCount: '+IntToString(RecCount,5)   +'  RecSize: ' +IntToString(RecSize,5)
         +'ReadRec : '+IntToString(WrittenRec,5) +'  FileSize: '+IntToString(Filesize,5));
@@ -790,12 +790,12 @@ begin
   end;
 end;
 
-Procedure tFile.Seek_Eof;
+Procedure tPlyFile.Seek_Eof;
 begin
   System.Seek(f,Filesize);
 end;
 
-Function  tFile.Seek_Read(FPos:Longint; Var Daten) : Boolean;
+Function  tPlyFile.Seek_Read(FPos:Longint; Var Daten) : Boolean;
 begin
   if (FPos>=0) and (FPos<=Filesize) then
   begin
@@ -808,7 +808,7 @@ begin
   end;
 end;
 
-Function  tFile.Seek_Write(FPos:Longint; Var Daten) : Boolean;
+Function  tPlyFile.Seek_Write(FPos:Longint; Var Daten) : Boolean;
 begin
   if (FPos>=0) and (FPos<=Filesize) then
   begin
@@ -821,7 +821,7 @@ begin
   end;
 end;
 
-Procedure tFile.Truncate;
+Procedure tPlyFile.Truncate;
 begin
   {$I-}
   System.Truncate(f);
@@ -829,12 +829,12 @@ begin
   FileLastError := IoResult;
   if (FileLastError<>0) then
   begin
-    ShowFileErrorMessage('tFile.Truncate',FileName
+    ShowFileErrorMessage('tPlyFile.Truncate',FileName
       ,'FileSize_Byte : '+FileSizeByte(FileName).ToString);
   end;
 end;
 
-Function  tFile.Erase : Boolean;
+Function  tPlyFile.Erase : Boolean;
 begin
   {$I-}
   System.Erase(f);
@@ -843,13 +843,13 @@ begin
   if (FileLastError<>0) and  // Success
      (FileLastError<>5) then // File is still opened by another user
   begin
-    ShowFileErrorMessage('tFile.Erase',FileName
+    ShowFileErrorMessage('tPlyFile.Erase',FileName
       ,'FileSize_Byte : '+FileSizeByte(FileName).ToString);
   end;
   Result := (FileLastError=0);
 end;
 
-Procedure tFile.Rename(NewName:String);
+Procedure tPlyFile.Rename(NewName:String);
 begin
   {$I-}
   System.Rename(f,NewName);
@@ -857,12 +857,12 @@ begin
   FileLastError := IoResult;
   if (FileLastError<>0) then
   begin
-    ShowFileErrorMessage('tFile.Rename',FileName
+    ShowFileErrorMessage('tPlyFile.Rename',FileName
       ,'FileSize_Byte : '+FileSizeByte(FileName).ToString);
   end;
 end;
 
-Function  tFile.DeleteRecord(FPosRecord:Longint) : Boolean;
+Function  tPlyFile.DeleteRecord(FPosRecord:Longint) : Boolean;
 Var RecordData               : pByte;
     FPos                     : Longint;
     Error                    : Boolean;
@@ -899,7 +899,7 @@ begin
   end;
 end;
 
-Procedure tFile.Close;
+Procedure tPlyFile.Close;
 begin
   if (IsOpen) then
   begin
@@ -909,13 +909,13 @@ begin
     FileLastError := IoResult;
     if (FileLastError<>0) then
     begin
-      ShowFileErrorMessage('tFile.Close',FileName
+      ShowFileErrorMessage('tPlyFile.Close',FileName
         ,'FileSize_Byte : '+FileSizeByte(FileName).ToString);
     end;
   end;
 end;
 
-Procedure tFile.Close_Delete;
+Procedure tPlyFile.Close_Delete;
 begin
   Close;
   Erase;
@@ -924,27 +924,27 @@ end;
 (***********************************)
 (***** TTextfile - Declaration *****)
 (***********************************)
-Function  tTextfile.GetFilename : String;
+Function  tPlyTextfile.GetFilename : String;
 begin
   Result := StrPas(tTextRec(tf).Name);
 end;
 
-Procedure tTextfile.Init;
+Procedure tPlyTextfile.Init;
 begin
   FillChar(tTextrec(tf),sizeof(tTextrec),#0);
 end;
 
-Function  tTextfile.Handle : tHandle;
+Function  tPlyTextfile.Handle : tHandle;
 begin
   Result := tTextRec(tf).Handle;
 end;
 
-Function  tTextfile.Mode : tFilemode;
+Function  tPlyTextfile.Mode : tFilemode;
 begin
   Result := tTextRec(tf).Mode;
 end;
 
-Function  tTextfile.GetFilemode : String;
+Function  tPlyTextfile.GetFilemode : String;
 begin
   if (Mode=fmclosed) then Result := 'Closed' else
   if (Mode=FMINPUT)  then Result := 'Input ' else
@@ -953,7 +953,7 @@ begin
                      else Result := Mode.ToString;
 end;
 
-Function  tTextfile.IsOpen : Boolean;
+Function  tPlyTextfile.IsOpen : Boolean;
 begin
   if (Mode=FMINPUT)  or
      (Mode=FMOUTPUT) or
@@ -961,7 +961,7 @@ begin
                      else Result := False;
 end;
 
-Function  tTextfile.Open_Read_Filemode(DName:String; FM:Byte) : Boolean;
+Function  tPlyTextfile.Open_Read_Filemode(DName:String; FM:Byte) : Boolean;
 begin
   if (DName<>'') then
   begin
@@ -987,17 +987,17 @@ begin
   Result := (FileLastError=0);
 end;
 
-Function  tTextfile.Open_Read(DName:String) : Boolean;
+Function  tPlyTextfile.Open_Read(DName:String) : Boolean;
 begin
   Result := Open_Read_Filemode(DName,fmShare);
 end;
 
-Function  tTextfile.Open_Read_Exklusiv(DName:String) : Boolean;
+Function  tPlyTextfile.Open_Read_Exklusiv(DName:String) : Boolean;
 begin
   Result := Open_Read_Filemode(DName,fmDenyRW);
 end;
 
-Function  tTextfile.Open_Write_Filemode(DName:String; FM:Byte;
+Function  tPlyTextfile.Open_Write_Filemode(DName:String; FM:Byte;
             UTF8_Bom:Boolean=False) : Boolean;
 begin
   if (DName<>'') then
@@ -1030,17 +1030,17 @@ begin
   Result := (FileLastError=0);
 end;
 
-Function  tTextfile.Open_Write(DName:String; UTF8_BOM:Boolean=False) : Boolean;
+Function  tPlyTextfile.Open_Write(DName:String; UTF8_BOM:Boolean=False) : Boolean;
 begin
   Result := Open_Write_Filemode(DName,fmShare,UTF8_BOM);
 end;
 
-Function  tTextfile.Open_Write_Exklusiv(DName:String) : Boolean;
+Function  tPlyTextfile.Open_Write_Exklusiv(DName:String) : Boolean;
 begin
   Result := Open_Write_Filemode(DName,fmDenyRW);
 end;
 
-Function  tTextfile.Create(DName:String; Codepage:Word=_Codepage_850) : Boolean;
+Function  tPlyTextfile.Create(DName:String; Codepage:Word=_Codepage_850) : Boolean;
 begin
   if (DName<>'') then
   begin
@@ -1057,7 +1057,7 @@ begin
   end else Result := False;
 end;
 
-Function  tTextfile.Create_Counter(FName:String; Codepage:Word=_Codepage_850) : Boolean;
+Function  tPlyTextfile.Create_Counter(FName:String; Codepage:Word=_Codepage_850) : Boolean;
 Var
   Directory : String;
 begin
@@ -1083,7 +1083,7 @@ begin
   end;
 end;
 
-Function  tTextfile.Append : Boolean;
+Function  tPlyTextfile.Append : Boolean;
 begin
   {$I-}
   System.Append(tf);
@@ -1092,7 +1092,7 @@ begin
   Result := (FileLastError=0);
 end;
 
-Function  tTextfile.Eof : Boolean;
+Function  tPlyTextfile.Eof : Boolean;
 begin
   if (IsOpen) then
   begin
@@ -1104,11 +1104,11 @@ begin
   begin
     Result        := True;
     FileLastError := 103;  // 103 = File not open
-    ShowFileErrorMessage('tTextfile.Eof',FileName,'File not open');
+    ShowFileErrorMessage('tPlyTextfile.Eof',FileName,'File not open');
   end;
 end;
 
-Function  tTextfile.Readln(Var Help:String) : Boolean;
+Function  tPlyTextfile.Readln(Var Help:String) : Boolean;
 begin
   if not(System.Eof(tf)) then
   begin
@@ -1124,7 +1124,7 @@ begin
   end;
 end;
 
-Function  tTextfile.Write(Help:String) : Boolean;
+Function  tPlyTextfile.Write(Help:String) : Boolean;
 begin
   {$I-}
   System.Write(tf,Help);
@@ -1133,7 +1133,7 @@ begin
   Result := (FileLastError=0);
 end;
 
-Function  tTextfile.Writeln(Help:String) : Boolean;
+Function  tPlyTextfile.Writeln(Help:String) : Boolean;
 begin
   {$I-}
   System.Writeln(tf,Help);
@@ -1142,7 +1142,7 @@ begin
   Result  := (FileLastError=0);
 end;
 
-Function  tTextfile.Erase : Boolean;
+Function  tPlyTextfile.Erase : Boolean;
 begin
   {$I-}
   System.Erase(tf);
@@ -1151,7 +1151,7 @@ begin
   Result := (FileLastError=0);
 end;
 
-Function  tTextfile.Rename(NewName:String) : Boolean;
+Function  tPlyTextfile.Rename(NewName:String) : Boolean;
 begin
   {$I-}
   System.Rename(tf,NewName);
@@ -1160,11 +1160,11 @@ begin
   if (FileLastError=0) then Result := True else
   begin
     Result := False;
-    ShowFileErrorMessage('tTextfile.Rename',FileName,'ErrorCode: '+FileLastError.ToString);
+    ShowFileErrorMessage('tPlyTextfile.Rename',FileName,'ErrorCode: '+FileLastError.ToString);
   end;
 end;
 
-Procedure tTextfile.Close_System;
+Procedure tPlyTextfile.Close_System;
 begin
   // Execute only when file is open
   if (IsOpen) then
@@ -1179,12 +1179,12 @@ begin
   end;
 end;
 
-Procedure tTextfile.Close;
+Procedure tPlyTextfile.Close;
 begin
   Close_System;
 end;
 
-Procedure tTextfile.Close_Delete;
+Procedure tPlyTextfile.Close_Delete;
 begin
   Close_System;
   Erase;

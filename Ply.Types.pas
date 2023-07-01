@@ -216,7 +216,7 @@ Type
   // TFileSize
   TFileSize               = Int64;
   // TFileAttribute
-  TFileAttribute          = Integer;
+  TPlyFileAttribute       = Integer;
   // TConsoleScreenPoint  : Coord of Smallint (16-Bit) (Char: Size(X,Y) or Point(X,Y))
   TConsoleWindowPoint     = TSmallPoint;
   // TConsoleScreenRect   : Rect of Smallint (16-Bit) (Char: columns & lines)

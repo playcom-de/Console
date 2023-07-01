@@ -30,15 +30,15 @@ Uses
   Const faFileAndDir = faReadOnly + faHidden + faSysFile + faDirectory + faArchive;
   {$WARNINGS ON}
 
-Function  PlyFindFirst(Path:String; Attr:tFileAttribute; var aSearchRec:tSearchRec) : Boolean;
+Function  PlyFindFirst(Path:String; Attr:tPlyFileAttribute; var aSearchRec:tSearchRec) : Boolean;
 Function  PlyFindNext(var aSearchRec:tSearchRec) : Boolean;
 Procedure PlyFindClose(var aSearchRec:tSearchRec);
 
-Function  PlyFileAttributesToString(Attr:tFileAttribute) : String;
-function  PlyFileGetAttributes(Const FileName:String) : tFileAttribute;
-Function  PlyFileSetAttributes(Const FileName:String; NewAttr:TFileAttribute) : Boolean;
-function  PlyFileSetOneAttribute(FileName: String; SetAttr: tFileAttribute): Boolean;
-function  PlyFileDelOneAttribute(FileName: String; DelAttr: tFileAttribute): Boolean;
+Function  PlyFileAttributesToString(Attr:tPlyFileAttribute) : String;
+function  PlyFileGetAttributes(Const FileName:String) : tPlyFileAttribute;
+Function  PlyFileSetAttributes(Const FileName:String; NewAttr:tPlyFileAttribute) : Boolean;
+function  PlyFileSetOneAttribute(FileName: String; SetAttr: tPlyFileAttribute): Boolean;
+function  PlyFileDelOneAttribute(FileName: String; DelAttr: tPlyFileAttribute): Boolean;
 
 Function  PlyFileSizeByte(Filename:String) : Int64;
 Function  PlyFileExists(FileNameWildCards:String; Out aSearchRec:tSearchrec) : Boolean; Overload;
@@ -98,11 +98,11 @@ Type tDirInfo                = Record
      Name                    : String;
      Size                    : tFilesize;
      DateTime                : tDateTime;
-     Attr                    : tFileAttribute;
+     Attr                    : tPlyFileAttribute;
      Procedure Clear;
      Function  IsClear : Boolean;
      Procedure Init(Var sr:tSearchRec; FilePath:String=''; ExcludeRootPath:String='');
-     Procedure InitDetails(eName:String; eSize:tFilesize; eDateTime:tDateTime; eAttr:tFileAttribute);
+     Procedure InitDetails(eName:String; eSize:tFilesize; eDateTime:tDateTime; eAttr:tPlyFileAttribute);
      Function  GetFile(aFileName:String) : Boolean;
      Function  GetPath(aFilePath:String) : Boolean;
      {$IFDEF CONSOLE}
@@ -190,7 +190,7 @@ Type tDirInfos = Class(tObject)
        Property  DirInfo[Index:Integer]:tDirInfo Read GetDirInfo; Default;
        Procedure Add(Var aDirInfo:tDirInfo); Overload;
        Procedure Add(Var sr:tSearchRec; FilePath:String=''); Overload;
-       Procedure Add(eName:String; eSize:tFileSize; eDateTime:TDateTime; eAttr:tFileAttribute); Overload;
+       Procedure Add(eName:String; eSize:tFileSize; eDateTime:TDateTime; eAttr:tPlyFileAttribute); Overload;
                  // Delete: Delete Filename form DirInfos if present
        Function  Delete(DeleteFileName:String; All:Boolean=False) : Boolean; Overload;
                  // Delete: Delete all Filenames in Strings form DirInfos
@@ -210,7 +210,7 @@ Type tDirInfos = Class(tObject)
        Function  TotalSize : TFilesize;
        Function  TextCountSize : String;
        {$IFDEF CONSOLE}
-       Procedure Show(DName:String; Attr:tFileAttribute);
+       Procedure Show(DName:String; Attr:tPlyFileAttribute);
        Function  TextSelectTitle : String;
        Function  TextSelectBottom : String;
        Function  TextSelectHeadLine : String;
@@ -253,11 +253,12 @@ Uses
   Ply.Files,
   System.Generics.Collections,
   System.Generics.Defaults,
+  System.IOUtils,
   System.StrUtils,
   WinAPI.PsAPI,
   WinAPI.Windows;
 
-Function  PlyFindFirst(Path:String; Attr:tFileAttribute; var aSearchRec:tSearchRec) : Boolean;
+Function  PlyFindFirst(Path:String; Attr:tPlyFileAttribute; var aSearchRec:tSearchRec) : Boolean;
 begin
   FillChar(aSearchRec,sizeof(aSearchRec),#0);
   Path := UpperCase(Path);
@@ -293,7 +294,7 @@ begin
   {$ENDIF}
 end;
 
-Function  PlyFileAttributesToString(Attr:tFileAttribute) : String;
+Function  PlyFileAttributesToString(Attr:tPlyFileAttribute) : String;
 begin
   Result := '';
   if ((Attr and faReadOnly)  <> 0) then Result := Result + 'Read only  ';
@@ -308,9 +309,9 @@ begin
   Result := Result;
 end;
 
-function PlyFileGetAttributes(Const FileName:String) : tFileAttribute;
+function PlyFileGetAttributes(Const FileName:String) : tPlyFileAttribute;
 {$IFDEF FPC}
-  Var CurAttr : tFileAttribute;
+  Var CurAttr : tPlyFileAttribute;
 {$ENDIF}
 begin
   {$IFDEF FPC}
@@ -324,7 +325,7 @@ begin
   {$ENDIF}
 end;
 
-Function PlyFileSetAttributes(Const FileName:String; NewAttr:TFileAttribute) : Boolean;
+Function PlyFileSetAttributes(Const FileName:String; NewAttr:tPlyFileAttribute) : Boolean;
 begin
   {$IFDEF FPC}
     SetFAttr(F, NewAttr);
@@ -337,8 +338,8 @@ begin
   {$ENDIF}
 end;
 
-function PlyFileSetOneAttribute(FileName: String; SetAttr:tFileAttribute): Boolean;
-Var Attr : tFileAttribute;
+function PlyFileSetOneAttribute(FileName: String; SetAttr:tPlyFileAttribute): Boolean;
+Var Attr : tPlyFileAttribute;
 begin
   if (FileExists(FileName)) then
   begin
@@ -369,9 +370,9 @@ begin
   end else Result := False;
 end;
 
-function PlyFileDelOneAttribute(FileName: String; DelAttr:tFileAttribute): Boolean;
+function PlyFileDelOneAttribute(FileName: String; DelAttr:tPlyFileAttribute): Boolean;
 
-  Procedure DeleteAttrIfSet(var CurAttr: tFileAttribute; DelAttr, ChkAttr:tFileAttribute);
+  Procedure DeleteAttrIfSet(var CurAttr: tPlyFileAttribute; DelAttr, ChkAttr:tPlyFileAttribute);
   begin
         // If ChkAttr should be deleted and
     if ((DelAttr and ChkAttr)=ChkAttr) and
@@ -382,7 +383,7 @@ function PlyFileDelOneAttribute(FileName: String; DelAttr:tFileAttribute): Boole
     end;
   end;
 
-Var OldAttr, NewAttr : tFileAttribute;
+Var OldAttr, NewAttr : tPlyFileAttribute;
 begin
   Result := False;
   if (FileExists(FileName)) then
@@ -796,7 +797,7 @@ begin
       end else
       begin
         // Check if the specified drive exists
-        Success := PlyDirectoryExists(ParentDir);
+        Success := TPath.DriveExists(ParentDir);
       end;
       PlyLastResult  := 0;
       // If the ParentDir exists or could be created, then try to
@@ -807,7 +808,7 @@ begin
         MkDir(Directory);
         {$I+}
         PlyLastResult := IoResult;
-        Result       := (PlyLastResult=0);
+        Result := (PlyLastResult=0);
       end;
     end else
     begin
@@ -891,7 +892,7 @@ end;
 Function  PlyFileCompare_Content(Filename1,Filename2:String) : Boolean;
 Var SearchRec1               : tSearchRec;
     SearchRec2               : tSearchRec;
-    File1,File2              : tFile;
+    File1,File2              : tPlyFile;
     Data1,Data2              : Array [1..16384] of Byte;
     ReadRec1,ReadRec2        : tRecCount;
     Equal                    : Boolean;
@@ -1153,7 +1154,7 @@ begin
   DateTime := sr.TimeStamp;
 end;
 
-Procedure tDirInfo.InitDetails(eName:String; eSize:tFileSize; eDateTime:tDateTime; eAttr:tFileAttribute);
+Procedure tDirInfo.InitDetails(eName:String; eSize:tFileSize; eDateTime:tDateTime; eAttr:tPlyFileAttribute);
 begin
   Name       := eName;
   Size       := eSize;
@@ -1484,7 +1485,7 @@ begin
   TAppender<TDirInfo>.Append(DInfos,aDirInfo);
 end;
 
-Procedure tDirInfos.Add(eName:String; eSize:tFileSize; eDateTime:tDateTime; eAttr:tFileAttribute);
+Procedure tDirInfos.Add(eName:String; eSize:tFileSize; eDateTime:tDateTime; eAttr:tPlyFileAttribute);
 Var aDirInfo : tDirInfo;
 begin
   aDirInfo.InitDetails(eName,eSize,eDateTime,eAttr);
@@ -1584,7 +1585,7 @@ end;
 
 Function  tDirInfos.Execute(eSearchPath: string=''): Boolean;
 Var sr                       : tSearchRec;
-    SearchAttr               : tFileAttribute;
+    SearchAttr               : tPlyFileAttribute;
 begin
   Result := False;
   // Init FSearchPath and determine possible FileFilter
@@ -1781,7 +1782,7 @@ begin
 end;
 
 {$IFDEF CONSOLE}
-Procedure tDirInfos.Show(DName:String; Attr:tFileAttribute);
+Procedure tDirInfos.Show(DName:String; Attr:tPlyFileAttribute);
 Var
   sr : tSearchrec;
   Anz : Array [0..$3F] of Word;
