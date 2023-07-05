@@ -2,7 +2,7 @@
 
   Name          : Ply.SysUtils.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 22.06.2023
+  Last modified : 01.07.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 

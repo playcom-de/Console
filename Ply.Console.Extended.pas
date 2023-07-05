@@ -167,11 +167,13 @@ Function  InputString(iString:String; iLength:Integer; StrLength:Integer=-1) : S
 Function  InputString(x,y:Integer; iString:String; iLength:Integer; StrLength:Integer=-1) : String; Overload;
 
 Function  InputDouble(iDouble:Double; iLength:Integer; Var Key:Word) : Double; Overload;
+Function  InputDouble(x,y:Integer; iDouble:Double; iLength:Integer; Var Key:Word) : Double; Overload;
 Function  InputDouble(iDouble:Double; iLength:Integer; Var Key:Word; Width:Integer;
             Comma:Byte=2; DecimalSeparator:WideChar='.';
             ThousandSeparator:WideChar='?') : Double; Overload;
 
 Function  InputInteger(iInteger:Integer; iLength:Integer; Var Key:Word) : Integer; Overload;
+Function  InputInteger(x,y:Integer; iInteger:Integer; iLength:Integer; Var Key:Word) : Integer; Overload;
 Function  InputInteger(iInteger:Int64; iLength:Integer; Var Key:Word) : Int64; Overload;
 
 Function  LineSelectExit(FromY,ToY,FromX,ToX:Integer; var CurrentY:Integer) : Word; Overload;
@@ -1649,6 +1651,12 @@ begin
   Result := StringToDouble(InputString(DoubleToString(iDouble),iLength,Key));
 end;
 
+Function  InputDouble(x,y:Integer; iDouble:Double; iLength:Integer; Var Key:Word) : Double;
+begin
+  GotoXY(x,y);
+  Result := StringToDouble(InputString(DoubleToString(iDouble),iLength,Key));
+end;
+
 Function  InputDouble(iDouble:Double; iLength:Integer; Var Key:Word; Width:Integer;
             Comma:Byte=2; DecimalSeparator:WideChar='.';
             ThousandSeparator:WideChar='?') : Double; Overload;
@@ -1665,6 +1673,12 @@ begin
   if (DoubleResult>=Integer.MinValue) and
      (DoubleResult<=Integer.MaxValue) then Result := Round(DoubleResult)
                                       else Result := 0;
+end;
+
+Function  InputInteger(x,y:Integer; iInteger:Integer; iLength:Integer; Var Key:Word) : Integer; Overload;
+begin
+  GotoXY(x,y);
+  Result := InputInteger(iInteger,iLength,Key);
 end;
 
 Function  InputInteger(iInteger:Int64; iLength:Integer; Var Key:Word) : Int64;

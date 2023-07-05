@@ -2,7 +2,7 @@
 
   Name          : crt.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 21.06.2023
+  Last modified : 05.07.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -69,6 +69,8 @@ Const ColorNames : Array [0..15] of String = ('Black','Blue','Green','Cyan'
         ,'Red','Magenta','Brown','Lightgray','Darkgray','Lightblue'
         ,'LightGreen','Lightcyan','Lightred','Lightmagenta','Yellow','White');
 
+{$I crt.inc}
+
 // Var Console: Access to all windows-functions like
 // - Font: Fontface & Fontsize
 // - Window: Size of console-window (lines & coloums)
@@ -96,6 +98,7 @@ function  ReadkeyW : WideChar; Overload;
 function  ReadkeyW(Var Key:Word) : WideChar; Overload;
 function  Readkey : WideChar; Overload;
 function  Readkey(Var Key:Word) : WideChar; Overload;
+Procedure ReadkeyTimeOut(Var Key:Word; TimeOutSeconds:Integer=10; TimeOutKey:Word=_ESC);
 function  ReadkeyYesNoEsc : Word;
 function  LastReadKeyChar : WideChar;
 
@@ -358,11 +361,10 @@ Const
   Proc_CTRL_ALT_T     : Procedure = Nil;
   Proc_CTRL_ALT_U     : Procedure = Nil;
 
-{$I crt.inc}
-
 implementation
 
 uses
+  Ply.DateTime,
   Ply.Math,
   Ply.StrUtils,
   System.SysUtils,
@@ -511,20 +513,12 @@ end;
 
 Function  MaxX : Integer;
 begin
-  {$IFDEF CONSOLE}
   Result := WindSize.Width;
-  {$ELSE}
-  Result := 80;
-  {$ENDIF}
 end;
 
 Function  MaxY : Integer;
 begin
-  {$IFDEF CONSOLE}
   Result := WindSize.Height;
-  {$ELSE}
-  Result := 25;
-  {$ENDIF}
 end;
 
 procedure Delay(MS: Word);
@@ -3150,6 +3144,26 @@ end;
 function  Readkey(Var Key:Word) : WideChar; Overload;
 begin
   Result := ReadkeyW(Key);
+end;
+
+Procedure ReadkeyTimeOut(Var Key:Word; TimeOutSeconds:Integer=10; TimeOutKey:Word=_ESC);
+Var StartDateTime : tDateTime;
+begin
+  if (TimeOutSeconds>0) then
+  begin
+    Key := TimeOutKey;
+    StartDateTime.InitNow;
+    Repeat
+      if (Keypressed) then
+      begin
+        Readkey(Key);
+        Exit;
+      end else
+      begin
+        Delay(50);
+      end;
+    Until (StartDateTime.AgeSeconds>=TimeOutSeconds);
+  end else Readkey(Key);
 end;
 
 Function  ReadkeyYesNoEsc : Word;

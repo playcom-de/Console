@@ -56,6 +56,8 @@ Type
     Function Year : Word;
     Function Month : Word;
     Function Day : Word;
+    Function Age : TDateTime;
+    Function AgeSeconds : Int64;
     Function ToDate: String;            // dd.mm.yyyy
     Function ToDateShort: String;       // dd.mm.yy
     Function ToTime: String;            // hh:mm:ss
@@ -337,6 +339,18 @@ end;
 Function TDateTimeHelper.Day : Word;
 begin
   Result := DayOf(Self);
+end;
+
+Function TDateTimeHelper.Age : TDateTime;
+Var CurDateTime : TDateTime;
+begin
+  CurDateTime.InitNow;
+  Result := CurDateTime - Self;
+end;
+
+Function TDateTimeHelper.AgeSeconds : Int64;
+begin
+  Result := Age.SecondsTotal;
 end;
 
 Function TDateTimeHelper.ToDate : String; // dd.mm.yyyy
