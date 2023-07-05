@@ -126,6 +126,21 @@ Type
     Property  Underline    : Boolean Read GetUnderline    Write SetUnderline;
   end;
 
+Type
+  TConsoleSelectionInfo = record
+    dwFlags: DWORD;
+    dwSelectionAnchor: TConsoleWindowPoint;
+    srSelection: TConsoleWindowRect;
+  end;
+
+function GetConsoleSelectionInfo(var ConsoleSelectionInfo:
+  TConsoleSelectionInfo): BOOL; stdcall;
+  external kernel32 name 'GetConsoleSelectionInfo';
+
+function CreatePseudoConsole(size:TConsoleWindowPoint; hInput,hOutput:tHandle;
+  dwFlags:DWord; phPC:Pointer): HResult; stdcall;
+  external kernel32 name 'CreatePseudoConsole';
+
 (*******************************)
 (***** Console-Buffer-Info *****)
 (*******************************)
@@ -471,6 +486,9 @@ Type tConsoleModes = Class
        // Opacity
        Function  GetOpacity : Byte;
        Procedure SetOpacity(Const Percent:Byte);
+       // FBool32[4]: AutoOpacityOnFocus
+       Function  GetAutoOpacityOnFocus : Boolean;
+       Procedure SetAutoOpacityOnFocus(Value:Boolean);
        {$ENDIF CONSOLEOPACITY}
        // FBool32[0]: EnableAsciiCodeInput
        Function  GetAsciiCodeInput : Boolean;
@@ -548,6 +566,7 @@ Type tConsoleModes = Class
        Property  Output : DWord Read FOutput;
        {$IFDEF CONSOLEOPACITY}
        Property  Opacity : Byte Read GetOpacity Write SetOpacity;
+       Property  AutoOpacityOnFocus : Boolean Read GetAutoOpacityOnFocus Write SetAutoOpacityOnFocus;
        {$ENDIF CONSOLEOPACITY}
        // EnableAsciiCodeInput: Enable (Ctrl+^) for Ascii-Input-Char
        Property  EnableAsciiCodeInput : Boolean Read GetAsciiCodeInput Write SetAsciiCodeInput;
@@ -811,6 +830,8 @@ Type tConsole = Class
 
        Procedure CursorOnNormalSize;
        Procedure CursorOnBigSize;
+       Function  GetConsoleSelection(Var SelectionAnachor: TConsoleWindowPoint;
+                   Var Selection: TConsoleWindowRect) : Boolean;
 
        // Title: Title of the Consol-Window
        Property  Title : String Read GetTitle Write SetTitle;
@@ -2419,6 +2440,18 @@ begin
      else AlternateWriteUnicodeStringProc := Nil;
 end;
 
+// AutoOpacityOnFocus: Automatically sets the opacity to 50% if the
+// console.window does not have the focus
+Function  tConsoleModes.GetAutoOpacityOnFocus : Boolean;
+begin
+  Result := FBool32[4];
+end;
+
+Procedure tConsoleModes.SetAutoOpacityOnFocus(Value:Boolean);
+begin
+  FBool32[4] := Value;
+end;
+
 Function  tConsoleModes.GetForceV2 : Boolean;
 begin
   Result := GetRegistryFeature('ForceV2');
@@ -3517,8 +3550,14 @@ begin
        then LocaleName := Languages.LocaleName[LangIdx]
        else LocaleName := '';
     FillChar(LCData,sizeof(LCData),#0);
-    getLocaleInfoEx(pchar(LocaleName), LOCALE_IDEFAULTANSICODEPAGE, @LCData[0], Sizeof(LCData));
-    Result := StrToInt(StrPas(LCData));
+    if (getLocaleInfoEx(pchar(LocaleName), LOCALE_IDEFAULTANSICODEPAGE,
+          @LCData[0], Sizeof(LCData))>0) then
+    begin
+      Result := StrToInt(StrPas(LCData));
+    end else
+    begin
+      Result := _Codepage_1252;
+    end;
   except
     Result := _Codepage_1252;
   end;
@@ -3531,7 +3570,7 @@ begin
   FillChar(pwszKLID,sizeof(pwszKLID),#0);
   if (GetKeyboardLayoutNameW(pwszKLID)) then
   begin
-    FKeyboardLayout := StrToInt('$'+StrPas(pwszKLID));
+    FKeyboardLayout := StrToUIntDef('$'+StrPas(pwszKLID),_KeyboardLayout_en_US);
   end else
   begin
     FKeyboardLayout := _KeyboardLayout_de_DE;
@@ -3680,10 +3719,16 @@ begin
   SetConsoleCursorInfo(ConHandleStdOut, FCursorInfo);
 end;
 
-//Procedure tConsole.SetDesktopPosition(X,Y:Integer);
-//begin
-//  SetDesktopPos(X,Y,True);
-//end;
+Function  tConsole.GetConsoleSelection(Var SelectionAnachor: TConsoleWindowPoint;
+                   Var Selection: TConsoleWindowRect) : Boolean;
+Var ConsoleSelectionInfo : TConsoleSelectionInfo;
+begin
+  if (GetConsoleSelectionInfo(ConsoleSelectionInfo)) then
+  begin
+    SelectionAnachor := ConsoleSelectionInfo.dwSelectionAnchor;
+    Selection        := ConsoleSelectionInfo.srSelection;
+  end;
+end;
 
 Function  tConsole.WindowSizeMin : TConsoleWindowPoint;
 Var

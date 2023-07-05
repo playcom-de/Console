@@ -210,7 +210,7 @@ Type
   // TCodepage            : ConsoleCodepage (Input / Output)
   TCodepage               = Longword;
   // TKeyboardLayout
-  TKeyboardLayout         = Word;
+  TKeyboardLayout         = Longword;
   // TConHandle           : Standard-Con-Handles
   TConHandle              = Winapi.Windows.THandle;
   // TFileSize

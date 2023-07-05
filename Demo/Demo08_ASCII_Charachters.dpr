@@ -129,7 +129,6 @@ begin
     begin
       Console.Font.FontNumber := (Key-_ALT_0);
     end;
-
   until (Key=_ESC);
   ScreenSave.Restore;
 end;

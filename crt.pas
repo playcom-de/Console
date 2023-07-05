@@ -226,6 +226,7 @@ Type TConsoleString = Record
        Procedure Save;
        Procedure Restore;
        Procedure RestorePart(X1,Y1,X2,Y2:Integer);
+       Procedure CatchUserSelection(Var SelectedScreen:tScreen);
        Procedure InvertString(x,y:Integer; Count:Integer);
        Procedure UnderlineString(x,y:Integer; Count:Integer);
        Procedure OutlineString(x,y:Integer; Count:Integer);
@@ -235,7 +236,8 @@ Type TConsoleString = Record
        property  Line[index:integer] : tConsoleString Read GetLine Write SetLine;
        Function  GetChar(x,y:integer) : tConsoleChar;
        Procedure SetChar(x,y:integer; Value:tConsoleChar);
-       Procedure GetRect(X1,Y1,X2,Y2:Integer; Var aScreen:tScreen);
+       Procedure GetRect(X1,Y1,X2,Y2:Integer; Var aScreen:tScreen); Overload;
+       Procedure GetRect(Rect:TConsoleWindowRect; Var aScreen:tScreen); Overload;
        Procedure SetRect(X1,Y1,X2,Y2:Integer; Var aScreen:tScreen);
        Procedure WriteXY(x,y:integer; uString:String); Overload;
        Procedure WriteXY(x,y:integer; TColor:Byte; uString:String); Overload;
@@ -1132,6 +1134,17 @@ begin
   CurScreen.Restore;
 end;
 
+Procedure tScreen.CatchUserSelection(Var SelectedScreen:tScreen);
+Var SelectionAnachor : TConsoleWindowPoint;
+    Selection        : TConsoleWindowRect;
+begin
+  if (Console.GetConsoleSelection(SelectionAnachor,Selection)) then
+  begin
+    Save;
+    GetRect(Selection,SelectedScreen);
+  end;
+end;
+
 Procedure tScreen.InvertString(x,y:Integer; Count:Integer);
 begin
   if (y>=1) and (y<Length(FLines)) then
@@ -1200,13 +1213,21 @@ Procedure tScreen.GetRect(X1,Y1,X2,Y2:Integer; Var aScreen:tScreen);
 Var aScreenSize : TConsoleWindowPoint;
     ay : integer;
 begin
-  aScreenSize.x := X2-X1+1;
-  aScreenSize.y := Y2-Y1+1;
-  aScreen.Init(aScreenSize);
-  for ay := Y1 to Y2 do
+  if (X1>0) and (Y1>0) and (X2>=X1) and (Y2>=Y1) then
   begin
-    aScreen.FLines[ay-Y1] := FLines[aY-1].StringCopy(X1,X2-X1+1);
-  end;
+    aScreenSize.x := X2-X1+1;
+    aScreenSize.y := Y2-Y1+1;
+    aScreen.Init(aScreenSize);
+    for ay := Y1 to Y2 do
+    begin
+      aScreen.FLines[ay-Y1] := FLines[aY-1].StringCopy(X1,X2-X1+1);
+    end;
+  end else aScreen.Clear;
+end;
+
+Procedure tScreen.GetRect(Rect:TConsoleWindowRect; Var aScreen:tScreen);
+begin
+  GetRect(Rect.Left,Rect.Top,Rect.Right,Rect.Bottom,aScreen);
 end;
 
 Procedure tScreen.SetRect(X1,Y1,X2,Y2:Integer; Var aScreen:tScreen);
@@ -2884,6 +2905,23 @@ begin
           ShowDebugConsole(Buf);
           {$ENDIF}
         end;
+      end;
+    end else
+    if (Buf.EventType = _MOUSE_EVENT) then
+    begin
+      // do something in future
+    end else
+    if (Buf.EventType = WINDOW_BUFFER_SIZE_EVENT) then
+    begin
+      // do something in future
+    end else
+    if (Buf.EventType = FOCUS_EVENT) then
+    begin
+      if (Console.Modes.AutoOpacityOnFocus) then
+      begin
+        if (Buf.Event.FocusEvent.bSetFocus)
+           then Console.Modes.Opacity := 100
+           else Console.Modes.Opacity := 50;
       end;
     end;
     if (RKW=$FFFF) then

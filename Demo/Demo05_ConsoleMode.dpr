@@ -53,12 +53,13 @@ begin
   WriteXY( 1, 3,'(2) Cursor-Size               : '+IntToString(Console.CursorSize)); ClrEol;
   {$IFDEF CONSOLEOPACITY}
   WriteXY( 1, 4,'(3) Opacity in %              : '+IntToString(Console.Modes.Opacity));
+  WriteXY( 1, 5,'(4) AutoOpacity on focus      : '+BoolToStringYesNo(Console.Modes.AutoOpacityOnFocus));
   {$ENDIF CONSOLEOPACITY}
   WriteXY(40, 1,TextAttrHead,'Crt extended features');
-  WriteXY(40, 2,'(4) UseAlternateWriteProc     : '+BoolToStringYesNo(Console.Modes.UseAlternateWriteProc));
-  WriteXY(40, 3,'(5) EnableAsciiCodeInput      : '+BoolToStringYesNo(Console.Modes.EnableAsciiCodeInput));
-  WriteXY(40, 4,'(6) WrapWord                  : '+BoolToStringYesNo(Console.Modes.WrapWord));
-  WriteXY(40, 5,'(7) ReplaceControlChracter    : '+BoolToStringYesNo(Console.Modes.ReplaceCtrlChar));
+  WriteXY(40, 2,'(5) UseAlternateWriteProc     : '+BoolToStringYesNo(Console.Modes.UseAlternateWriteProc));
+  WriteXY(40, 3,'(6) EnableAsciiCodeInput      : '+BoolToStringYesNo(Console.Modes.EnableAsciiCodeInput));
+  WriteXY(40, 4,'(7) WrapWord                  : '+BoolToStringYesNo(Console.Modes.WrapWord));
+  WriteXY(40, 5,'(8) ReplaceControlChracter    : '+BoolToStringYesNo(Console.Modes.ReplaceCtrlChar));
 
   WriteXY( 1, 7,TextAttrHead,'V2 console features');
   WriteXY(23, 7,TextAttrNote,'Note: Some of this V2-features needs restart of application');
@@ -140,11 +141,12 @@ begin
            else OpacityPercent := 100;
         Console.Modes.Opacity := OpacityPercent;
       end else
+      if (Key=_4) then Console.Modes.AutoOpacityOnFocus        := not(Console.Modes.AutoOpacityOnFocus)       else
       {$ENDIF CONSOLEOPACITY}
-      if (Key=_4) then Console.Modes.UseAlternateWriteProc     := not(Console.Modes.UseAlternateWriteProc)    else
-      if (Key=_5) then Console.Modes.EnableAsciiCodeInput      := not(Console.Modes.EnableAsciiCodeInput)     else
-      if (Key=_6) then Console.Modes.WrapWord                  := not(Console.Modes.WrapWord)                 else
-      if (Key=_7) then Console.Modes.ReplaceCtrlChar           := not(Console.Modes.ReplaceCtrlChar)          else
+      if (Key=_5) then Console.Modes.UseAlternateWriteProc     := not(Console.Modes.UseAlternateWriteProc)    else
+      if (Key=_6) then Console.Modes.EnableAsciiCodeInput      := not(Console.Modes.EnableAsciiCodeInput)     else
+      if (Key=_7) then Console.Modes.WrapWord                  := not(Console.Modes.WrapWord)                 else
+      if (Key=_8) then Console.Modes.ReplaceCtrlChar           := not(Console.Modes.ReplaceCtrlChar)          else
       // Special V2 Features
       if (Key=_F2) then Console.Modes.ForceV2                  := not(Console.Modes.ForceV2)                  else
       if (Key=_F3) then Console.Modes.LineSelection            := not(Console.Modes.LineSelection)            else
