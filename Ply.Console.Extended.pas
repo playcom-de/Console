@@ -153,9 +153,11 @@ Procedure WriteRight(y:Smallint; aString:String);
 Procedure CursorMoveField(Var FieldNumber:Integer; MinNum:Integer=0; MaxNum:Integer=99);
 
 Function  InputString(iString:String; iLength,StrLength:Integer; TColor,BColor:Byte;
-            Var Key:Word; ShowX:Integer=0; ShowY:Integer=0) : String; Overload
+            Var Key:Word; ShowX:Integer=0; ShowY:Integer=0) : String; Overload;
+Function  InputString(iString:String; iLength,StrLength:Integer; Var Key:Word) : String; Overload;
+Function  InputString(x,y:Integer; iString:String; iLength,StrLength:Integer; Var Key:Word) : String; Overload;
 Function  InputString(x,y:Integer; iString:String; iLength,StrLength:Integer;
-            TColor,BColor:Byte; Var Key:Word; ShowX:Integer=0; ShowY:Integer=0) : String; Overload
+            TColor,BColor:Byte; Var Key:Word; ShowX:Integer=0; ShowY:Integer=0) : String; Overload;
 
 Function  InputString(iString:String; iLength:Integer; TColor,BColor:Byte; var Key:Word) : String; Overload;
 Function  InputString(x,y:Integer; iString:String; iLength:Integer; TColor,BColor:Byte; var Key:Word) : String; Overload;
@@ -1601,6 +1603,17 @@ begin
   Result := StringDeleteControlCharacter(iString.TrimRight);
   Console.CursorOnNormalSize;
   TextAttr  := SaveTextAttr;
+end;
+
+Function  InputString(iString:String; iLength,StrLength:Integer; Var Key:Word) : String; Overload;
+begin
+  Result := InputString(iString,iLength,StrLength,Black,LightGray,Key);
+end;
+
+Function  InputString(x,y:Integer; iString:String; iLength,StrLength:Integer; Var Key:Word) : String; Overload;
+begin
+  GotoXY(x,y);
+  Result := InputString(iString,iLength,StrLength,Black,LightGray,Key);
 end;
 
 Function  InputString(x,y:Integer; iString:String; iLength,StrLength:Integer;

@@ -323,8 +323,8 @@ Type tConsoleFont = Class
        Function  GetFontSize : Byte;
        Procedure SetFontSize(Const Value:Byte);
      public
-       constructor Create;
-       destructor Destroy; override;
+       Constructor Create;
+       Destructor Destroy; Override;
        // GetCurrentFontEx: Retrieve CurrentFont from System
        Function  GetCurrentFontEx : Boolean;
        Function  GetCurrentFontOld : Boolean; overload;
@@ -360,7 +360,7 @@ Type tConsoleFont = Class
        Property  FontName : String Read GetFontName;
      End;
 
-procedure SystemFontsCollect(FontList: TStringList);
+procedure SystemFontsCollect(FontList: TStrings);
 
 (***************************)
 (***** tConsoleDesktop *****)
@@ -378,7 +378,7 @@ Type tConsoleDesktop = Class
        Property  Area : TConsoleDesktopRect Read GetArea Write SetArea;
        Property  Position : TConsoleDesktopPoint Read GetPosition Write SetPosition;
        Constructor Create;
-       Destructor Destroy; override;
+       Destructor Destroy; Override;
        Procedure AutofitPosition;
        Procedure MoveTo(Const X,Y:Longint; AutoFit:Boolean=False);
        // FrameSize: Border & Caption to be added to WindowSize * FontSize
@@ -777,8 +777,8 @@ Type tConsole = Class
        // Font-Setting for current Console-Window
        Font : tConsoleFont;
 
-       constructor Create;
-       destructor Destroy; override;
+       Constructor Create;
+       Destructor Destroy; Override;
 
        Property Colors[Index:Integer] : TColorRef Read GetColor Write SetColor;
        Property InputCodepage : TCodepage Read FInputCodepage Write SetInputCodepage;
@@ -804,7 +804,7 @@ Type tConsole = Class
        // WindowSize: Console-Window-Size as (Right-Left | Bottom-Top)
        Property  WindowSize : TConsoleWindowPoint Read GetWindowSize write SetWindowSize;
        // Window: Set size of window in char (X * Y)
-       Procedure Window(Var WindowSizeNew: TConsoleWindowPoint;
+       Procedure Window(WindowSizeNew: TConsoleWindowPoint;
            FitScreen:Boolean=True; ClearScreen:Boolean=True); overload;
        Procedure Window(Const SizeX,SizeY:Smallint;
            FitScreen:Boolean=True; ClearScreen:Boolean=True); overload;
@@ -867,15 +867,14 @@ Type tConsole = Class
 
 Type TConsole_ColorTable = Array [0..15] of TColorRef;
 
-Type tConsoleInfoEx             = Class
+Type tConsoleInfoEx = Class
      Private
         FScreenBufferInfoEx: TConsoleBufferInfoEx;
-        FScreenBufferTime: tDateTime;
-        FScreenBufferCount: Longword;
         Function  GetColor(Index:Integer) : TColorRef;
         Procedure SetColor(Index:Integer; Const Value:TColorRef);
      Public
        Constructor Create;
+       Destructor Destroy; Override;
        Function  GetInfoEx : Boolean;
        Function  SetInfoEx : Boolean;
                  // ScreenSize: Console-Buffer in Char (columns and lines)
@@ -894,10 +893,6 @@ Type tConsoleInfoEx             = Class
        Property  FullscreenSupported : BOOL Read FScreenBufferInfoEx.bFullscreenSupported write FScreenBufferInfoEx.bFullscreenSupported;
                  // ColorTable: 16 Colors like "old" crt.pas
        Property  ColorTable[Index:Integer] : TColorRef Read GetColor Write SetColor;
-                 // ScreenBufferTime: Timestamp from last Update
-       Property  ScreenBufferTime : tDateTime Read FScreenBufferTime Write FScreenBufferTime;
-                 // ScreenBufferCount: Count of GetInfoEx since programm started
-       Property  ScreenBufferCount : Longword Read FScreenBufferCount Write FScreenBufferCount;
        Procedure SetColorTableDefault;
        Procedure SetColorTableWindows;
      End;
@@ -1476,13 +1471,13 @@ begin
   end;
 end;
 
-constructor tConsoleFont.Create;
+Constructor tConsoleFont.Create;
 begin
   Inherited Create;
   Clear;
 end;
 
-destructor tConsoleFont.Destroy;
+Destructor tConsoleFont.Destroy;
 begin
   Inherited Destroy;
 end;
@@ -1698,7 +1693,7 @@ begin
   Result := 1;
 end;
 
-procedure SystemFontsCollect(FontList: TStringList);
+procedure SystemFontsCollect(FontList: TStrings);
 var
   DC: HDC;
   LFont: TLogFont;
@@ -3186,7 +3181,7 @@ begin
   end;
 end;
 
-procedure tConsole.Window(Var WindowSizeNew: TConsoleWindowPoint; FitScreen:
+procedure tConsole.Window(WindowSizeNew: TConsoleWindowPoint; FitScreen:
     Boolean = True; ClearScreen: Boolean = True);
 Var TargetConsoleRect        : TConsoleDesktopRect;
     WindowSizeHelp           : TConsoleWindowPoint;
@@ -3350,6 +3345,7 @@ begin
             FScreenBufferInfo.srWindow := ConsoleInfoEx.WindowRect;
           end;
         end;
+        ConsoleInfoEx.Free;
       end else
       begin
         raise EConsoleApiError.Create('SetConsoleWindowInfo;'+SysErrorMessage(GetLastError));
@@ -3466,7 +3462,7 @@ Destructor tConsole.Destroy;
 begin
   Font.Free;
   Modes.Free;
-  FreeAndNil(Desktop);
+  Desktop.Free;
   Inherited Destroy;
 end;
 
@@ -3490,6 +3486,7 @@ begin
     begin
       Result := ConsoleInfoEx.ColorTable[index];
     end;
+    ConsoleInfoEx.Free;
   end;
 end;
 
@@ -3504,6 +3501,7 @@ begin
       ConsoleInfoEx.ColorTable[index] := aColor;
       ConsoleInfoEx.SetInfoEx;
     end;
+    ConsoleInfoEx.Free;
   end;
 end;
 
@@ -3587,6 +3585,7 @@ begin
     ConsoleInfoEx.SetColorTableDefault;
     ConsoleInfoEx.SetInfoEx;
   end;
+  ConsoleInfoEx.Free;
 end;
 
 Procedure tConsole.UseColorTableWindows;
@@ -3598,6 +3597,7 @@ begin
     ConsoleInfoEx.SetColorTableDefault;
     ConsoleInfoEx.SetInfoEx;
   end;
+  ConsoleInfoEx.Free;
 end;
 
 Function  tConsole.GetScreenBufferInfo : Boolean;
@@ -3723,10 +3723,12 @@ Function  tConsole.GetConsoleSelection(Var SelectionAnachor: TConsoleWindowPoint
                    Var Selection: TConsoleWindowRect) : Boolean;
 Var ConsoleSelectionInfo : TConsoleSelectionInfo;
 begin
+  Result := False;
   if (GetConsoleSelectionInfo(ConsoleSelectionInfo)) then
   begin
     SelectionAnachor := ConsoleSelectionInfo.dwSelectionAnchor;
     Selection        := ConsoleSelectionInfo.srSelection;
+    Result := True;
   end;
 end;
 
@@ -3781,9 +3783,12 @@ Constructor tConsoleInfoEx.Create;
 begin
   Inherited Create;
   FillChar(FScreenBufferInfoEx,Sizeof(FScreenBufferInfoEx),#0);
-  ScreenBufferTime := 0;
-  ScreenBufferCount := 0;
 End;
+
+Destructor tConsoleInfoEx.Destroy;
+begin
+  Inherited Destroy;
+end;
 
 Function  tConsoleInfoEx.GetInfoEx : Boolean;
 begin
@@ -3792,8 +3797,6 @@ begin
     if (GetConBufferInfoEx(FScreenBufferInfoEx)) then
     begin
       Result := True;
-      ScreenBufferTime := Now;
-      inc(FScreenBufferCount);
     end;
   Except
     On E : EConsoleApiError do ShowMessage(e.Message);

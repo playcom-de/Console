@@ -863,7 +863,7 @@ begin
     end;
   Until (Key=_F10) or (Key=_Esc);
   if (Key=_F10) then Result := DirInfo.Name;
-  DirInfos.Destroy;
+  DirInfos.Free;
 end;
 {$ENDIF CONSOLE}
 
@@ -1442,9 +1442,9 @@ end;
 
 Destructor tDirInfos.Destroy;
 begin
-  ExcludeSubDirs.Destroy;
-  IncludeFilter.Destroy;
-  ExcludeFilter.Destroy;
+  ExcludeSubDirs.Free;
+  IncludeFilter.Free;
+  ExcludeFilter.Free;
   SetLength(DInfos,0);
   Inherited Destroy;
 end;

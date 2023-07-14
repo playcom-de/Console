@@ -139,7 +139,8 @@ Function  Str_CP1252_Unicode(Const cString:CP1252String) : UnicodeString;
 Function  Str_Unicode_CP850(Const uString:UnicodeString) : CP850String;
 Function  Str_Unicode_ShortString(Const uString:UnicodeString) : ShortString;
 
-Function  Guess_UTF8(Const Bytes:TBytes) : Boolean;
+Function  Guess_UTF8(Const Bytes:TBytes) : Boolean; Overload;
+Function  Guess_UTF8(Const aString:AnsiString) : Boolean; Overload;
 
 implementation
 
@@ -2281,6 +2282,13 @@ begin
      (C3Bytes/TotalBytes>0.002) or
      (E2Bytes/TotalBytes>0.002) then Result := True
                                 else Result := False;
+end;
+
+Function  Guess_UTF8(Const aString:AnsiString) : Boolean;
+Var Bytes : TBytes;
+begin
+  Bytes := BytesOf(aString);
+  Result := Guess_UTF8(Bytes);
 end;
 
 initialization
