@@ -48,6 +48,7 @@ Type
     Procedure InitMillisecond1970(eMillisecond:Int64);
     Procedure AddDays(CountDays:Integer);
     Procedure AddMilliSeconds(eMilliSeconds:Int64);
+    Function  Compare(aDateTime:TDateTime) : Integer;
 
     Function SecondsTotal : Int64;
     Function MilliSeconds1970 : Int64;
@@ -303,6 +304,13 @@ end;
 Procedure TDateTimeHelper.AddMilliSeconds(eMilliSeconds:Int64);
 begin
   Self := Self + (eMilliSeconds/MilliSecondsPerDay);
+end;
+
+Function TDateTimeHelper.Compare(aDateTime:TDateTime) : Integer;
+begin
+  if (Self<aDateTime) then Result := -1 else
+  if (Self>aDateTime) then Result := 1
+                      else Result := 0;
 end;
 
 Function TDateTimeHelper.SecondsTotal : Int64;

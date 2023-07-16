@@ -2238,7 +2238,7 @@ var
   sLen : Byte;
   Help : ShortString;
 begin
-  sLen    := Min(255,length(uString));
+  sLen := Min(255,length(uString));
   SetLength(Help,sLen);
   for i := 1 to sLen do
   begin

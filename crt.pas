@@ -187,7 +187,7 @@ Type TConsoleString = Record
        Function  uString : UnicodeString;
        Function  ToUpper : UnicodeString;
        Procedure Clear(cChar:WideChar=' '; cAttr:Word=0); Overload;
-       Procedure Clear(x1,x2:Integer;  cChar:WideChar=' '; cAttr:Word=0); Overload;
+       Procedure Clear(x1,x2:Integer; cChar:WideChar=' '; cAttr:Word=0); Overload;
        Function  Len : integer;
        // Save line - Refers to the current crt.window
        Procedure Save(y:Smallint);
@@ -824,7 +824,7 @@ begin
   FStrChar := uString.ToCharArray;
 
   if (Textcolor>0) or (Textbackground>0)
-     then TextAttr.Color(Textcolor,Textbackground)
+     then TextAttr.Create(Textcolor,Textbackground)
      else TextAttr.Attr := _TextAttr_Default;
   InitAttr(length(uString),TextAttr.Attr);
 end;
@@ -2917,12 +2917,14 @@ begin
     end else
     if (Buf.EventType = FOCUS_EVENT) then
     begin
+      {$IFDEF CONSOLEOPACITY}
       if (Console.Modes.AutoOpacityOnFocus) then
       begin
         if (Buf.Event.FocusEvent.bSetFocus)
            then Console.Modes.Opacity := 100
            else Console.Modes.Opacity := 50;
       end;
+      {$ENDIF CONSOLEOPACITY}
     end;
     if (RKW=$FFFF) then
     begin
@@ -3209,8 +3211,11 @@ Var Key : Word;
 begin
   Repeat
     ReadkeyW(Key);
-    if (Key=_CTRL_ALT_J) or (Key=_CTRL_ALT_Y) then Key := _Yes else
-    if (Key=_CTRL_ALT_N)                      then Key := _No;
+    // J/Y = Yes (German Ja)
+    // N   = No  (German Nein)
+    if (Key=_J) or (Key=_CTRL_ALT_J) or
+       (Key=_Y) or (Key=_CTRL_ALT_Y) then Key := _Yes else
+    if (Key=_N) or (Key=_CTRL_ALT_N) then Key := _No;
   Until (Key=_Yes) or (Key=_No) or (Key=_ESC);
   Result := Key;
 end;

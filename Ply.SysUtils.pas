@@ -72,6 +72,7 @@ Function  PlyDirectoryCreate(Directory:String):Boolean;
 Function  PlyDirectoryDelete(Directory:String) : Boolean;
 {$IFDEF CONSOLE}
 Function  PlyDirectorySelect(StartDirectory:String) : String;
+Function  PlyFileSelect(StartDirectory:String; Filename:String='*'; ChangeDir:Boolean=True) : String;
 {$ENDIF CONSOLE}
 
 Function  PlyFileCompare_SizeTime(Filename1,Filename2:String) : Boolean;
@@ -214,7 +215,7 @@ Type tDirInfos = Class(tObject)
        Function  TextSelectTitle : String;
        Function  TextSelectBottom : String;
        Function  TextSelectHeadLine : String;
-       Function  Select(Var DirInfo:tDirInfo; Var Key:Word;
+       Function  Select(Out DirInfo:tDirInfo; Var Key:Word;
                    HelpTextNumber:Integer=-1) : Boolean;
        {$ENDIF CONSOLE}
      end;
@@ -839,7 +840,6 @@ begin
   end;
 end;
 
-
 {$IFDEF CONSOLE}
 Function  PlyDirectorySelect(StartDirectory:String) : String;
 Var
@@ -849,7 +849,9 @@ Var
 begin
   Result := '';
   DirInfos := TDirInfos.Create;
-  DirInfos.SearchPath := StartDirectory;
+  if (PlyDirectoryExists(StartDirectory))
+     then DirInfos.SearchPath := StartDirectory
+     else DirInfos.SearchPath := Filepath_Exe;
   DirInfos.SelectPath := True;
   Repeat
     DirInfos.ClearEntries;
@@ -863,6 +865,39 @@ begin
     end;
   Until (Key=_F10) or (Key=_Esc);
   if (Key=_F10) then Result := DirInfo.Name;
+  DirInfos.Free;
+end;
+
+Function  PlyFileSelect(StartDirectory:String; Filename:String='*'; ChangeDir:Boolean=True) : String;
+Var
+  DirInfos : tDirInfos;
+  DirInfo : tDirInfo;
+  Key : Word;
+begin
+  Result := '';
+  DirInfos := TDirInfos.Create;
+  if (PlyDirectoryExists(StartDirectory))
+     then DirInfos.SearchPath := StartDirectory
+     else DirInfos.SearchPath := Filepath_Exe;
+  DirInfos.AddDirs := ChangeDir;
+  DirInfos.IncludeFilter.Add(Filename);
+
+  Repeat
+    DirInfos.ClearEntries;
+    if (DirInfos.Execute) then
+    begin
+      DirInfos.Select(DirInfo,Key);
+      if (Key=_Return) and (DirInfo.Directory) then
+      begin
+        DirInfos.SearchPath := DirInfo.Name;
+      end;
+    end else
+    begin
+      ConsoleShowNote('File-Select','No files found',DirInfos.SearchPath+DirInfos.IncludeFilter.CommaText);
+      Key := _ESC;
+    end;
+  Until ((Key=_Return) and not(DirInfo.Directory)) or (Key=_Esc);
+  if (Key=_Return) then Result := DirInfo.Name;
   DirInfos.Free;
 end;
 {$ENDIF CONSOLE}
@@ -1199,7 +1234,8 @@ Procedure tDirInfo.WriteLines(y:Integer);
 begin
   ClrLines(y+0,y+3);
   WriteXY(1,y+0,'Filename   : '+Name);
-  WriteXY(1,y+1,'Filesize   : '+IntToString(Size,0,'.')+' Byte | '+Size.ToStringReadable(False));
+  WriteXY(1,y+1,'Filesize   : '+IntToString(Size,0,'.')+' Byte');
+  if (Size>1024000) then Write(' | '+Size.ToStringReadable);
   WriteXY(1,y+2,'Filetime   : '+DateTime.ToDateTime);
   WriteXY(1,y+3,'Attributes : '+PlyFileAttributesToString(Attr));
 end;
@@ -1667,7 +1703,6 @@ begin
   TArray.Sort<TDirInfo>(DInfos, TComparer<TDirInfo>.Construct(
 
     function (const A, B: TDirInfo) : Integer
-    Var LResult : Integer;
     begin
       if (a.Directory) and (b.Directory) then
       begin
@@ -1686,27 +1721,6 @@ begin
       // Sort SubDirs
       if (a.SubDir='')    and (b.SubDir<>'')   then Result := -1 else
       if (a.SubDir<>'')   and (b.SubDir='')    then Result := 1  else
-      if (a.SubDir<>'')   and (b.SubDir<>'')   then
-      begin
-        LResult := AnsiCompareText(a.SubDir,b.SubDir);
-        // Same SubDir -> Sort by Parameter
-        if (LResult=0) then
-        begin
-          if FileSort=NameUp        then Result := AnsiCompareText(A.FileName, B.FileName) else
-          if FileSort=NameDown      then Result := AnsiCompareText(B.FileName, A.FileName) else
-          if FileSort=ExtensionUp   then Result := AnsiCompareText(A.Extension, B.Extension) else
-          if FileSort=ExtensionDown then Result := AnsiCompareText(B.Extension, A.Extension) else
-          if FileSort=SizeUp        then Result := A.Size - B.Size                 else
-          if FileSort=SizeDown      then Result := B.Size - A.Size                 else
-          if FileSort=DateTimeUp    then Result := Round(A.DateTime - B.DateTime)  else
-          if FileSort=DateTimeDown  then Result := Round(B.DateTime - A.DateTime)
-                                    else Result := 0;
-        end else
-        // Different SubDir Sort by SubDir
-        begin
-          Result := LResult;
-        end;
-      end else
       begin
         // Sort files by parameter
         if FileSort=NameUp        then Result := AnsiCompareText(A.Name, B.Name) else
@@ -1715,8 +1729,8 @@ begin
         if FileSort=ExtensionDown then Result := AnsiCompareText(B.Extension, A.Extension) else
         if FileSort=SizeUp        then Result := A.Size - B.Size                 else
         if FileSort=SizeDown      then Result := B.Size - A.Size                 else
-        if FileSort=DateTimeUp    then Result := Round(A.DateTime - B.DateTime)  else
-        if FileSort=DateTimeDown  then Result := Round(B.DateTime - A.DateTime)
+        if FileSort=DateTimeUp    then Result := A.DateTime.Compare(B.DateTime)  else
+        if FileSort=DateTimeDown  then Result := B.DateTime.Compare(A.DateTime)
                                   else Result := 0;
       end;
     end));
@@ -1822,16 +1836,20 @@ end;
 
 Function  tDirInfos.TextSelectTitle : String;
 begin
-  if (FRootPath<>'') then Result := FRootPath else
-  if (SelectPath)    then Result := 'Select Directory - '+FRootPath
-                     else Result := 'Select File - '+FRootPath;
+  if (SelectPath)
+     then Result := 'Select Directory'
+     else Result := 'Select File';
+  if (FRootPath<>'')
+     then Result := Result + ' - ' + FRootPath;
+  if (IncludeFilter.CommaText<>'')
+     then Result := Result + IncludeFilter.CommaText;
 end;
 
 Function  tDirInfos.TextSelectBottom : String;
 begin
   if (SelectPath)
      then Result := '(F10) Select directory'
-     else Result := 'Files : '+Count.ToString+'│F1 Help';
+     else Result := 'Files : '+Count.ToString;
 end;
 
 Function  tDirInfos.TextSelectHeadLine : String;
@@ -1840,45 +1858,50 @@ begin
           + '            Exten│    Size  │    Date│    Time';
 end;
 
-Function  tDirInfos.Select(Var DirInfo:tDirInfo; Var Key:Word;
+Function  tDirInfos.Select(Out DirInfo:tDirInfo; Var Key:Word;
             HelpTextNumber:Integer=-1) : Boolean;
 Var SelectItems              : tSelectItems;
     ItemPos                  : Longint;
-    SelectedItem             : Longint;
     FileSort                 : TFilesort;
     Refresh                  : Boolean;
     ScreenSave               : tScreenSave;
-    HeadLine                 : TConsoleString;
 begin
   ScreenSave.Save;
   Result := False;
-  if (Length(DInfos)>0) then
+  DirInfo.Clear;
+  if (Count>0) then
   begin
     Key      := _ESC;
-    SelectItems.Init;
     FSelectedLast := ReplaceText(FSelectedLast,FRootPath,'');
     FileSort := NameUp;
     Repeat
-      Refresh      := False;
-      SelectedItem := 0;
-      ItemPos      := 0;
+      SelectItems.Init;
+      Refresh := False;
+      ItemPos := 0;
       Repeat
         SelectItems.AddItem(ItemPos,DInfos[ItemPos].TextSelect(97),'',DInfos[ItemPos].Size);
         // Place the cursor on this record
         if (DInfos[ItemPos].Name=FSelectedLast) then
         begin
-          SelectedItem := ItemPos;
+          SelectItems.SelectedValue := ItemPos;
         end;
         inc(ItemPos);
       Until (ItemPos>High(DInfos));
       Repeat
         SelectItems.HelpTextNumber := HelpTextNumber;
 
+        SelectItems.Headline.Create(TextSelectHeadLine,LightGreen);
+        if (Console.WindowSize.x<SelectItems.Headline.Len+4) or
+           (Console.WindowSize.y<15)             then
+        begin
+          Console.Window(Max(SelectItems.Headline.Len+4,Console.WindowSize.x)
+            ,Max(15,Console.WindowSize.y));
+        end;
+
         Window(TextSelectTitle,TextSelectBottom);
         SelectItems.ExitOnPgKey := False;
         SelectItems.SortExtern  := True;
-        HeadLine.Create(TextSelectHeadLine);
-        SelectItems.Select(1,MaxY,HeadLine,SelectedItem,Key);
+        SelectItems.Select(1,MaxY,Key);
         if (Key>=_ALT_1) and (Key<=_ALT_4) then
         begin
           Refresh := True;
@@ -1914,13 +1937,13 @@ begin
         end else
         if (Key=_Return) then
         begin
-          if (GetDirInfo(SelectedItem,DirInfo)) then
+          if (GetDirInfo(SelectItems.SelectedValue,DirInfo)) then
           begin
             // If (SelectPath) is activ and DirInfo is not a Directory, then only
             // ShowFileInfo an don't exit the function
-            if (SelectPath) and not(DInfos[SelectedItem].Directory) then
+            if (SelectPath) and not(DInfos[SelectItems.SelectedValue].Directory) then
             begin
-              DirInfo := DInfos[SelectedItem];
+              DirInfo := DInfos[SelectItems.SelectedValue];
               DirInfo.ShowPopUp;
               Key := _Space;
             end;
@@ -1928,7 +1951,7 @@ begin
         end else
         if (Key=_F2) or (Key=_Space) then
         begin
-          if (GetDirInfo(SelectedItem,DirInfo)) then
+          if (GetDirInfo(SelectItems.SelectedValue,DirInfo)) then
           begin
             DirInfo.ShowPopUp;
           end;
@@ -1949,7 +1972,6 @@ begin
             (Key=_ALT_F8) or   // Delete multiple files
             (Key=_ALT_E)  or   // Extract files if ZipFile
             (Key=_ALT_Z);      // Zip Files in ZipFile
-      SelectItems.Done;
     Until (Key=_ESC)    or
           (Key=_Return) or
           (Key=_CRT_Delete) or
@@ -1973,7 +1995,7 @@ begin
         Result := True;
       end else
       // Return DirInfo from current Cursor-Position
-      if (GetDirInfo(SelectedItem,DirInfo)) then
+      if (GetDirInfo(SelectItems.SelectedValue,DirInfo)) then
       begin
         // Save Filename so that the cursor jumps
         // to this entry when the function is called again
@@ -1985,6 +2007,7 @@ begin
         Result := True;
       end;
     end else DirInfo.Clear;
+    SelectItems.Done;
   end else
   begin
     DirInfo.Clear;

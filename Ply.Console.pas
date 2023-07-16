@@ -2435,6 +2435,7 @@ begin
      else AlternateWriteUnicodeStringProc := Nil;
 end;
 
+{$IFDEF CONSOLEOPACITY}
 // AutoOpacityOnFocus: Automatically sets the opacity to 50% if the
 // console.window does not have the focus
 Function  tConsoleModes.GetAutoOpacityOnFocus : Boolean;
@@ -2446,6 +2447,7 @@ Procedure tConsoleModes.SetAutoOpacityOnFocus(Value:Boolean);
 begin
   FBool32[4] := Value;
 end;
+{$ENDIF CONSOLEOPACITY}
 
 Function  tConsoleModes.GetForceV2 : Boolean;
 begin
@@ -3568,7 +3570,11 @@ begin
   FillChar(pwszKLID,sizeof(pwszKLID),#0);
   if (GetKeyboardLayoutNameW(pwszKLID)) then
   begin
+    {$IFDEF DELPHI10UP}
     FKeyboardLayout := StrToUIntDef('$'+StrPas(pwszKLID),_KeyboardLayout_en_US);
+    {$ELSE}
+    FKeyboardLayout := StrToIntDef('$'+StrPas(pwszKLID),_KeyboardLayout_en_US);
+    {$ENDIF DELPHI10UP}
   end else
   begin
     FKeyboardLayout := _KeyboardLayout_de_DE;

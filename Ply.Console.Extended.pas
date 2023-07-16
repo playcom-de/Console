@@ -188,10 +188,10 @@ Function  CodepageSelect(Const Codepage:Cardinal; CP_Source:Cardinal=1) : Cardin
 Function  CodepageSelectInstalled(Const Codepage:Cardinal) : Cardinal;
 Function  CodepageSelectSupported(Const Codepage:Cardinal) : Cardinal;
 
-Type TSelectSort = (SortUp, SortDown, FPosUp, FPosDown, ShortUp, ShortDown, LongUp, LongDown);
+Type TSelectSort = (SortUp, SortDown, FValueUp, FValueDown, ShortUp, ShortDown, LongUp, LongDown);
 
 Type tSelectItem             = Record
-     FPos                    : Integer;
+     Value                   : Integer;
      NameLong                : TConsoleString;
      NameShort               : TConsoleString;
      SortValue               : TSortValue;
@@ -208,11 +208,17 @@ Type tSelectItems            = Record
        FExitOnPgKey          : Boolean;
        FExitOnNumber         : Boolean;
        FSortExtern           : Boolean;
+       FHeadline             : TConsoleString;
        FHelpTextNumber       : Integer;
+       FSelectIndex          : Integer;
        FLastSort             : TSelectSort;
        Function  GetItemByIndex(Index:Integer) : tSelectItem;
        Function  GetItemByName(Const sName:String) : tSelectItem;
        Procedure SetItemByIndex(Index:Integer; Value:tSelectItem);
+       Function  GetValueByIndex(Index:Integer) : Integer;
+       Function  GetSelected : tSelectItem;
+       Function  GetSelectedValue : Integer;
+       Procedure SetSelectedValue(eValue:Integer);
        {$IFDEF DELPHIXE8DOWN}
        Procedure DelItem(Index:Integer);
        {$ENDIF DELPHIXE8DOWN}
@@ -223,37 +229,40 @@ Type tSelectItems            = Record
        Property    ExitOnNumber : Boolean Read FExitOnNumber Write FExitOnNumber;
        Property    SortExtern : Boolean Read FSortExtern Write FSortExtern;
        Property    HelpTextNumber : Longint Read FHelpTextNumber Write FHelpTextNumber;
-       Function    AddItem(eFPos:Longint; eNameLong:String; eNameShort:String='';
+       Function    AddItem(eValue:Longint; eNameLong:String; eNameShort:String='';
                      eColor:Byte=LightGray) : Boolean; Overload;
-       Function    AddItem(eFPos:Longint; eNameLong,eNameShort:String; eSortValue:TSortValue;
+       Function    AddItem(eValue:Longint; eNameLong,eNameShort:String; eSortValue:TSortValue;
                      eColor:Byte=LightGray) : Boolean; Overload;
-       Function    AddItem(eFPos:Longint; eNameLong:TConsoleString) : Boolean; Overload;
-       Function    AddItem(eFPos:Longint; eNameLong,eNameShort:TConsoleString;
+       Function    AddItem(eValue:Longint; eNameLong:TConsoleString) : Boolean; Overload;
+       Function    AddItem(eValue:Longint; eNameLong,eNameShort:TConsoleString;
                      eSortValue:tSortValue) : Boolean; Overload;
-       Procedure   DeleteItem(eFPos:Longint);
-       Procedure   UpdateItem(eFPos:Longint; eNameLong:String); Overload;
-       Procedure   UpdateItem(eFPos:Longint; eNameLong:String; eColor:Byte); Overload;
+       Procedure   DeleteItem(eValue:Longint);
+       Procedure   UpdateItem(eValue:Longint; eNameLong:String); Overload;
+       Procedure   UpdateItem(eValue:Longint; eNameLong:String; eColor:Byte); Overload;
        Procedure   Sort(SelectSort:TSelectSort);
        Function    MaxLen_NameShort : Integer;
        Function    MaxLen_NameLong : Integer;
        Function    Count : Integer;
-       Function    FPosMin : Integer;
-       Function    FPosMax : Integer;
-       Function    IsMember(eFPos:Longint) : Boolean;
+       Function    ValueMin : Integer;
+       Function    ValueMax : Integer;
+       Function    IsMember(eValue:Longint) : Boolean;
        Property    Item[Index: integer]: tSelectItem read GetItemByIndex write SetItemByIndex; default;
        Property    Item[const sName: string]: tSelectItem read GetItemByName; default;
+       Property    FPos[Index: integer]: Integer Read GetValueByIndex;
+       Property    Headline : TConsoleString Read FHeadLine Write FHeadline;
+       Property    SelectIndex : Integer Read FSelectIndex Write FSelectIndex;
+       Property    Selected : tSelectItem Read GetSelected;
+       Property    SelectedValue : Integer Read GetSelectedValue Write SetSelectedValue;
 
-       Function    GetIndexByFPos(sFPos:Integer) : Integer;
+       Function    GetIndexByValue(sValue:Integer) : Integer;
        Function    GetIndexBySearch(SearchString:String) : Integer;
        Function    GetIndexByNameShort(sNameShort:String) : Integer;
        Function    GetIndexByNameLong(sNameLong:String) : Integer;
-       Function    GetItemByFPos(sFPos:Integer; Var aItem:tSelectItem) : Boolean;
-       Function    Select(FromY,ToY:Integer; HeadLine:TConsoleString;
-                     Var FPosSelect:Integer; Var Key:Word) : Boolean; Overload;
-       Function    Select(Left,Top,Right,Bottom:Integer; Title,BottomLeft:String;
-                     HeadLine:TConsoleString; Var FPosSelect:Integer; Var Key:Word) : Boolean; Overload;
-       Function    Select(Title,BottomLeft:String; HeadLine:TConsoleString;
-                     Var FPosSelect:Integer; Var Key:Word) : Boolean; Overload;
+       Function    GetItemByValue(sValue:Integer; Var aItem:tSelectItem) : Boolean;
+       Function    Select(FromY,ToY:Integer; Var Key:Word) : Boolean; Overload;
+       Function    Select(Left,Top,Right,Bottom:Integer;
+                     Title,BottomLeft:String; Var Key:Word) : Boolean; Overload;
+       Function    Select(Title,BottomLeft:String; Var Key:Word) : Boolean; Overload;
      end;
 
 Procedure ConsoleShowMessage(x,y,SizeX,SizeY:Integer; FrameAttr:TTextAttr;
@@ -434,15 +443,15 @@ begin
         SelectScreen.AddItem(FPos,ScreenSaveIndex.SelectString);
       end;
       aFile.Close;
-      FPos := 0;
       Repeat
+        SelectScreen.Headline := ScreenSaveIndex.SelectHeadline;
         SelectScreen.Select(Console.WindowSize.x-72,2,Console.WindowSize.X-2
-          ,Console.WindowSize.Y-1,'Select Screen','(Enter) Select, (Esc) Exit'
-          ,ScreenSaveIndex.SelectHeadline,FPos,Key);
+          ,Console.WindowSize.Y-1,'Select Screen'
+          ,'(Enter) Select, (Esc) Exit',Key);
       Until (Key=_Return) or (Key=_Esc);
       if (Key=_Return) then
       begin
-        if (LoadFromFile(FPos)) then
+        if (LoadFromFile(SelectScreen.SelectedValue)) then
         begin
           Result := True;
         end;
@@ -1196,7 +1205,7 @@ begin
   Bottom := ValueMinMax(Bottom,Top+2 ,Console.WindowSize.y);
 
   // If background should be deleted
-  if (ClrBackground) and (ColorBackground<=LightGray) then
+  if (ClrBackground) then
   begin
     Crt.Window(1,1,Console.WindowSize.X,Console.WindowSize.Y);
     Crt.Textbackground(ColorBackground);
@@ -1809,13 +1818,13 @@ begin
            // Color: Use 4 colors in alternation
           ,(i mod 4)+7);
       end;
-      CP_SelectItem.Sort(FPosUp);
-      CP_Number := Console.OutputCodepage;
-      if (CP_SelectItem.Select(5,3,80,27,'Select Codepage','',TConsoleString.Create(''),CP_Number,Key)) then
+      CP_SelectItem.Sort(FValueUp);
+      CP_SelectItem.SelectedValue := Console.OutputCodepage;
+      if (CP_SelectItem.Select(5,3,80,27,'Select Codepage','',Key)) then
       begin
-        if IsValidCodePage(CP_Number) then
+        if IsValidCodePage(CP_SelectItem.Selected.Value) then
         begin
-          Result := CP_Number;
+          Result := CP_SelectItem.Selected.Value;
         end;
       end;
       Key := _ALT_C;
@@ -1840,7 +1849,7 @@ end;
 (***********************)
 procedure tSelectItem.Clear;
 begin
-  FPos      := -1;
+  Value := -1;
   NameLong.Create('');
   NameShort.Create('');
   SortValue := 0;
@@ -1916,6 +1925,30 @@ begin
   end;
 end;
 
+Function  tSelectItems.GetValueByIndex(Index:Integer) : Integer;
+begin
+  Result := Item[Index].Value;
+end;
+
+Function  tSelectItems.GetSelected : tSelectItem;
+Var RItem : tSelectItem;
+begin
+  RItem.Clear;
+  if (SelectIndex>=0) and (SelectIndex<=High(Items))
+     then RItem := Items[SelectIndex];
+  Result := RItem;
+end;
+
+Function  tSelectItems.GetSelectedValue : Integer;
+begin
+  Result := GetSelected.Value;
+end;
+
+Procedure tSelectItems.SetSelectedValue(eValue:Integer);
+begin
+  SelectIndex := GetIndexByValue(eValue);
+end;
+
 {$IFDEF DELPHIXE8DOWN}
 Procedure tSelectItems.DelItem(Index:Integer);
 Var
@@ -1940,7 +1973,9 @@ begin
   FExitOnPgKey          := False;
   FExitOnNumber         := False;
   FSortExtern           := False;
+  FHeadline.Create('');
   FHelpTextNumber       := -1;
+  FSelectIndex          := 0;
   FLastSort             := LongDown;
 end;
 
@@ -1949,13 +1984,13 @@ begin
   SetLength(Items,0);
 end;
 
-Function  tSelectItems.AddItem(eFPos:Integer; eNameLong:String;
+Function  tSelectItems.AddItem(eValue:Integer; eNameLong:String;
             eNameShort:String=''; eColor:Byte=LightGray) : Boolean;
 Var NewItem : tSelectItem;
 begin
   Try
-    NewItem.FPos      := eFPos;
-    NewItem.SortValue := eFPos;
+    NewItem.Value     := eValue;
+    NewItem.SortValue := eValue;
     NewItem.NameLong.Init(eNameLong,eColor);
     NewItem.NameShort.Init(eNameShort,eColor);
     {$IFDEF DELPHI10UP}
@@ -1970,12 +2005,12 @@ begin
   End;
 end;
 
-Function  tSelectItems.AddItem(eFPos:Integer; eNameLong,eNameShort:String;
+Function  tSelectItems.AddItem(eValue:Integer; eNameLong,eNameShort:String;
             eSortValue:TSortValue; eColor:Byte=LightGray) : Boolean;
 Var NewItem : tSelectItem;
 begin
   Try
-    NewItem.FPos      := eFPos;
+    NewItem.Value     := eValue;
     NewItem.SortValue := eSortValue;
     NewItem.NameLong.Init(eNameLong,eColor);
     NewItem.NameShort.Init(eNameShort,eColor);
@@ -1991,12 +2026,12 @@ begin
   End;
 end;
 
-Function  tSelectItems.AddItem(eFPos:Longint; eNameLong:TConsoleString) : Boolean;
+Function  tSelectItems.AddItem(eValue:Longint; eNameLong:TConsoleString) : Boolean;
 Var NewItem : tSelectItem;
 begin
   Try
-    NewItem.FPos      := eFPos;
-    NewItem.SortValue := eFPos;
+    NewItem.Value     := eValue;
+    NewItem.SortValue := eValue;
     NewItem.NameLong  := eNameLong;
     NewItem.NameShort.Create('');
     {$IFDEF DELPHI10UP}
@@ -2011,12 +2046,12 @@ begin
   End;
 end;
 
-Function  tSelectItems.AddItem(eFPos:Longint; eNameLong,eNameShort:TConsoleString;
+Function  tSelectItems.AddItem(eValue:Longint; eNameLong,eNameShort:TConsoleString;
             eSortValue:tSortValue) : Boolean;
 Var NewItem : tSelectItem;
 begin
   Try
-    NewItem.FPos      := eFPos;
+    NewItem.Value     := eValue;
     NewItem.SortValue := eSortValue;
     NewItem.NameLong  := eNameLong;
     NewItem.NameShort := eNameShort;
@@ -2032,12 +2067,12 @@ begin
   End;
 end;
 
-Procedure   tSelectItems.DeleteItem(eFPos:Integer);
+Procedure   tSelectItems.DeleteItem(eValue:Integer);
 Var i : Integer;
 begin
   for I := High(Items) downto 0 do
   begin
-    if (Items[i].FPos=eFPos) then
+    if (Items[i].Value=eValue) then
     begin
       {$IFDEF DELPHI10UP}
       System.Delete(Items,i,1);
@@ -2048,24 +2083,24 @@ begin
   end;
 end;
 
-Procedure   tSelectItems.UpdateItem(eFPos:Integer; eNameLong:String);
+Procedure   tSelectItems.UpdateItem(eValue:Integer; eNameLong:String);
 Var i : Integer;
 begin
   for I := 0 to High(Items) do
   begin
-    if (Items[i].FPos=eFPos) then
+    if (Items[i].Value=eValue) then
     begin
       Items[i].NameLong.Create(eNameLong);
     end;
   end;
 end;
 
-Procedure   tSelectItems.UpdateItem(eFPos:Integer; eNameLong:String; eColor:Byte);
+Procedure   tSelectItems.UpdateItem(eValue:Integer; eNameLong:String; eColor:Byte);
 Var i : Integer;
 begin
   for I := 0 to High(Items) do
   begin
-    if (Items[i].FPos=eFPos) then
+    if (Items[i].Value=eValue) then
     begin
       Items[i].NameLong.Init(eNameLong,eColor);
     end;
@@ -2083,14 +2118,14 @@ begin
       for i2 := i1+1 to High(Items) do
       begin
            (* SortValue *)
-        if ((SelectSort=SortUp)    and (Items[i2].SortValue<Items[i1].SortValue)) or
-           ((SelectSort=SortDown)  and (Items[i2].SortValue>Items[i1].SortValue)) or
-           ((SelectSort=FPosUp)    and (Items[i2].FPos     <Items[i1].FPos))      or
-           ((SelectSort=FPosDown)  and (Items[i2].FPos     >Items[i1].FPos))      or
-           ((SelectSort=ShortUp)   and (Items[i2].NameShort<Items[i1].NameShort)) or
-           ((SelectSort=ShortDown) and (Items[i2].NameShort>Items[i1].NameShort)) or
-           ((SelectSort=LongUp)    and (Items[i2].NameLong <Items[i1].NameLong))  or
-           ((SelectSort=LongDown)  and (Items[i2].NameLong >Items[i1].NameLong))  then
+        if ((SelectSort=SortUp)     and (Items[i2].SortValue<Items[i1].SortValue)) or
+           ((SelectSort=SortDown)   and (Items[i2].SortValue>Items[i1].SortValue)) or
+           ((SelectSort=FValueUp)   and (Items[i2].Value     <Items[i1].Value))    or
+           ((SelectSort=FValueDown) and (Items[i2].Value     >Items[i1].Value))    or
+           ((SelectSort=ShortUp)    and (Items[i2].NameShort<Items[i1].NameShort)) or
+           ((SelectSort=ShortDown)  and (Items[i2].NameShort>Items[i1].NameShort)) or
+           ((SelectSort=LongUp)     and (Items[i2].NameLong <Items[i1].NameLong))  or
+           ((SelectSort=LongDown)   and (Items[i2].NameLong >Items[i1].NameLong))  then
         begin
           HelpItem  := Items[i1];
           Items[i1] := Items[i2];
@@ -2130,43 +2165,43 @@ begin
   Result := Length(Items);
 end;
 
-Function    tSelectItems.FPosMin : Integer;
-Var PosMin : Integer;
-    i      : Integer;
+Function    tSelectItems.ValueMin : Integer;
+Var VMin : Integer;
+    i    : Integer;
 begin
   if (Length(Items)>0) then
   begin
-    PosMin := High(Integer);
+    VMin := High(Integer);
     for I := 0 to High(Items) do
     begin
-      PosMin := Min(PosMin,Items[i].FPos);
+      VMin := Min(VMin,Items[i].Value);
     end;
-    Result := PosMin;
+    Result := VMin;
   end else Result := -1;
 end;
 
-Function    tSelectItems.FPosMax : Integer;
-Var PosMax : Integer;
-    i      : Integer;
+Function    tSelectItems.ValueMax : Integer;
+Var VMax : Integer;
+    i    : Integer;
 begin
   if (Length(Items)>0) then
   begin
-    PosMax := Low(Integer);
+    VMax := Low(Integer);
     for I := 0 to High(Items) do
     begin
-      PosMax := Min(PosMax,Items[i].FPos);
+      VMax := Max(VMax,Items[i].Value);
     end;
-    Result := PosMax;
+    Result := VMax;
   end else Result := -1;
 end;
 
-Function    tSelectItems.IsMember(eFPos:Integer) : Boolean;
+Function    tSelectItems.IsMember(eValue:Integer) : Boolean;
 Var i : Integer;
 begin
   Result := False;
   for I := 0 to High(Items) do
   begin
-    if (Items[i].FPos=eFPos) then
+    if (Items[i].Value=eValue) then
     begin
       Result := True;
       Exit;
@@ -2174,13 +2209,13 @@ begin
   end;
 end;
 
-Function    tSelectItems.GetIndexByFPos(sFPos:Integer) : Integer;
+Function    tSelectItems.GetIndexByValue(sValue:Integer) : Integer;
 Var i : Integer;
 begin
   Result := -1;
   for I := 0 to High(Items) do
   begin
-    if (Items[i].FPos=sFPos) then
+    if (Items[i].Value=sValue) then
     begin
       Result := i;
       Exit;
@@ -2281,12 +2316,12 @@ begin
   end;
 end;
 
-Function    tSelectItems.GetItemByFPos(sFPos:Integer; Var aItem:tSelectItem) : Boolean;
+Function    tSelectItems.GetItemByValue(sValue:Integer; Var aItem:tSelectItem) : Boolean;
 Var ItemNo : Integer;
 begin
   Result := False;
   aItem.Clear;
-  ItemNo := GetIndexByFPos(sFPos);
+  ItemNo := GetIndexByValue(sValue);
   if (ItemNo>=0) and (ItemNo<=High(Items)) then
   begin
     aItem  := Items[ItemNo];
@@ -2294,8 +2329,7 @@ begin
   end;
 end;
 
-Function    tSelectItems.Select(FromY,ToY:Integer; HeadLine:TConsoleString;
-              Var FPosSelect:Integer; Var Key:Word) : Boolean;
+Function    tSelectItems.Select(FromY,ToY:Integer; Var Key:Word) : Boolean;
 
   Procedure Clr_EName(Var eName:String);
   begin
@@ -2312,6 +2346,7 @@ Var ItemFrom                 : Integer;
     ItemMax                  : Integer;
     ItemSelect               : Integer;
     LenShort                 : Integer;
+    CurValue                 : Integer;
     Refresh                  : Boolean;
     YMin                     : Smallint;
     YMax                     : Smallint;
@@ -2320,12 +2355,12 @@ Var ItemFrom                 : Integer;
     YSelect                  : Integer;
     eName                    : String;
     SetSelect                : Boolean;
-    FPosSave                 : Integer;
+    ValueSave                : Integer;
 begin
   Result      := False;
   if (Count>0) then
   begin
-    FPosSave    := FPosSelect;
+    ValueSave   := SelectedValue;
     LenShort    := MaxLen_NameShort;
     ItemMax     := Count-1;
     YMax        := Min(ToY,MaxY);
@@ -2333,7 +2368,7 @@ begin
     LinesMax    := YMax-YMin+1;
     YCurrent    := YMin;
     // Set ItemFrom to the preselected value 
-    ItemFrom    := GetIndexByFPos(FPosSelect);
+    ItemFrom    := GetIndexByValue(SelectedValue);
     // If there are fewer entries, then start the output beforehand 
     if (ItemMax-ItemFrom<(YMax-YMin+1)) then
     begin
@@ -2361,7 +2396,7 @@ begin
         YCurrent := YMin;
         Repeat
           Items[ItemCurrent].WriteSelection(YCurrent,LenShort);
-          if (SetSelect) and (Items[ItemCurrent].FPos=FPosSelect) then
+          if (SetSelect) and (ItemCurrent=SelectIndex) then
           begin
             YSelect   := YCurrent;
             SetSelect := False;
@@ -2384,12 +2419,12 @@ begin
       if not(SortExtern) and (Key>=_Alt_1) and (Key<=_Alt_4) then
       begin
         ItemSelect := ItemFrom + YCurrent - YMin;
-        FPosSelect := Item[ItemSelect].FPos;
+        CurValue   := Item[ItemSelect].Value;
         if (Key=_ALT_1) then Sort(SortUp)  else
-        if (Key=_ALT_2) then Sort(FPosUp)  else
+        if (Key=_ALT_2) then Sort(FValueUp)  else
         if (Key=_ALT_3) then Sort(ShortUp) else
         if (Key=_ALT_4) then Sort(LongUp);
-        ItemFrom := GetIndexByFPos(FPosSelect);
+        ItemFrom := GetIndexByValue(CurValue);
         // If there are fewer entries, then start the output beforehand 
         if (ItemMax<LinesMax) then ItemFrom := 1 else
         if (ItemFrom>1)       then ItemFrom := Max(0,ItemFrom-(LinesMax div 2));
@@ -2470,9 +2505,9 @@ begin
       end else
       if (Key=_CTRL_PgDown) or (Key=_CTRL_End) then
       begin
-        FPosSelect := ItemMax-1;
-        ItemFrom   := ItemMax - (ToY-FromY) + 1;
-        YCurrent   := YMax;
+        SelectIndex := ItemMax-1;
+        ItemFrom    := ItemMax - (ToY-FromY) + 1;
+        YCurrent    := YMax;
       end;
     Until (Key=_Return)     or  (Key=_ESC)       or (Key=_Space) or
           ((ExitOnPgKey)    and ((Key=_PgUp)     or (Key=_PgDown))) or
@@ -2503,21 +2538,21 @@ begin
        (Key=_Insert) then
     begin
       ItemSelect  := ItemFrom + YSelect - YMin;
-      FPosSelect := Item[ItemSelect].FPos;
-      if (FPosSelect>=0) and (Key=_Return) then Result := True;
-    end else FPosSelect := FPosSave;
+      SelectIndex := ItemSelect;
+      if (Key=_Return) then Result := True;
+    end else SelectedValue := ValueSave;
   end;
 end;
 
-Function  tSelectItems.Select(Left,Top,Right,Bottom:Integer; Title,BottomLeft:String;
-            HeadLine:TConsoleString; Var FPosSelect:Integer; Var Key:Word) : Boolean;
+Function  tSelectItems.Select(Left,Top,Right,Bottom:Integer;
+            Title,BottomLeft:String; Var Key:Word) : Boolean;
 Var ScreenSave : tScreenSave;
 begin
   if (Count>0) then
   begin
     ScreenSave.Save;
     Window(Left,Top,Right,Bottom,Title,_TextAttr_Yellow_Blue,BottomLeft);
-    Result := Select(1,MaxY,HeadLine,FPosSelect,Key);
+    Result := Select(1,MaxY,Key);
     ScreenSave.Restore;
   end else
   begin
@@ -2526,13 +2561,12 @@ begin
   end;
 end;
 
-Function  tSelectItems.Select(Title,BottomLeft:String; HeadLine:TConsoleString;
-            Var FPosSelect:Integer; Var Key:Word) : Boolean;
+Function  tSelectItems.Select(Title,BottomLeft:String; Var Key:Word) : Boolean;
 Var ScreenSave : tScreenSave;
 begin
   ScreenSave.Save;
   Window(Title,BottomLeft);
-  Result := Select(1,MaxY,HeadLine,FPosSelect,Key);
+  Result := Select(1,MaxY,Key);
   ScreenSave.Restore;
 end;
 
