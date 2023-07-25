@@ -45,7 +45,7 @@ begin
 
     Repeat
       ClrScr;
-      WriteXY(1, 1,'Program  : '+FilePathName_Exe);
+      WriteXY(1, 1,'Program  : '+ExeFile_Filename);
       WriteXY(1, 3,White,'(1) Edit ProgDataPath        : '+PlyProgDataPath);
       WriteXY(1, 4,White,'(2) Edit ScreenSave.Filename : '+ScreenSave.Filename);
       WriteXY(1, 7,'Current Values :');

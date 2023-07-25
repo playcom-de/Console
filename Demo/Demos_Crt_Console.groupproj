@@ -33,6 +33,9 @@
         <Projects Include="Demo10_Debug_VCL_App.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="Demo11_Scrolltext.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -131,14 +134,23 @@
     <Target Name="Demo10_Debug_VCL_App:Make">
         <MSBuild Projects="Demo10_Debug_VCL_App.dproj" Targets="Make"/>
     </Target>
+    <Target Name="Demo11_Scrolltext">
+        <MSBuild Projects="Demo11_Scrolltext.dproj"/>
+    </Target>
+    <Target Name="Demo11_Scrolltext:Clean">
+        <MSBuild Projects="Demo11_Scrolltext.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Demo11_Scrolltext:Make">
+        <MSBuild Projects="Demo11_Scrolltext.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="Demo01_Minimal_Console_App;Demo02_Fontface_Fontsize;Demo03_Move_Window;Demo04_Input_Keyboard;Demo05_ConsoleMode;Demo06_Colors;Demo07_ScreenSave;Demo08_ASCII_Charachters;Demo09_BuiltIn_Features;Demo10_Debug_VCL_App"/>
+        <CallTarget Targets="Demo01_Minimal_Console_App;Demo02_Fontface_Fontsize;Demo03_Move_Window;Demo04_Input_Keyboard;Demo05_ConsoleMode;Demo06_Colors;Demo07_ScreenSave;Demo08_ASCII_Charachters;Demo09_BuiltIn_Features;Demo10_Debug_VCL_App;Demo11_Scrolltext"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="Demo01_Minimal_Console_App:Clean;Demo02_Fontface_Fontsize:Clean;Demo03_Move_Window:Clean;Demo04_Input_Keyboard:Clean;Demo05_ConsoleMode:Clean;Demo06_Colors:Clean;Demo07_ScreenSave:Clean;Demo08_ASCII_Charachters:Clean;Demo09_BuiltIn_Features:Clean;Demo10_Debug_VCL_App:Clean"/>
+        <CallTarget Targets="Demo01_Minimal_Console_App:Clean;Demo02_Fontface_Fontsize:Clean;Demo03_Move_Window:Clean;Demo04_Input_Keyboard:Clean;Demo05_ConsoleMode:Clean;Demo06_Colors:Clean;Demo07_ScreenSave:Clean;Demo08_ASCII_Charachters:Clean;Demo09_BuiltIn_Features:Clean;Demo10_Debug_VCL_App:Clean;Demo11_Scrolltext:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="Demo01_Minimal_Console_App:Make;Demo02_Fontface_Fontsize:Make;Demo03_Move_Window:Make;Demo04_Input_Keyboard:Make;Demo05_ConsoleMode:Make;Demo06_Colors:Make;Demo07_ScreenSave:Make;Demo08_ASCII_Charachters:Make;Demo09_BuiltIn_Features:Make;Demo10_Debug_VCL_App:Make"/>
+        <CallTarget Targets="Demo01_Minimal_Console_App:Make;Demo02_Fontface_Fontsize:Make;Demo03_Move_Window:Make;Demo04_Input_Keyboard:Make;Demo05_ConsoleMode:Make;Demo06_Colors:Make;Demo07_ScreenSave:Make;Demo08_ASCII_Charachters:Make;Demo09_BuiltIn_Features:Make;Demo10_Debug_VCL_App:Make;Demo11_Scrolltext:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

@@ -22,30 +22,6 @@ Const fsOriginFromBeginning = 0;
       fsOriginFromCurrent   = 1;
       fsOriginFromEnd       = 2;
 
-Const fmDenyRW   = fmOpenReadWrite + fmShareExclusive; (* $12 = $2 + $10 (D18) = Datei Exclusiv, RW untersagen *)
-      fmDenyW    = fmOpenReadWrite + fmShareDenyWrite; (* $22 = $2 + $20 (D34) = Datei Exclusiv, W untersagen  *)
-      fmShareR   = fmOpenRead      + fmShareDenyNone;  (* $40 = $0 + $40 (D64) *)
-      fmShare    = fmOpenReadWrite + fmShareDenyNone;  (* $42 = $2 + $40 (D66) = Standard *)
-
-{$IFDEF MACOS64}
-Type tFileMode   = Longword;
-     tRecSize    = Integer;
-     tRecCount   = Integer;
-{$ELSE}
-  {$IFDEF IOS}
-  Type tFileMode   = Longword;
-       tRecSize    = Integer;
-       tRecCount   = Integer;
-  {$ENDIF}
-{$ENDIF}
-
-
-{$IFDEF MSWINDOWS}
-Type tFileMode   = Longword;   { unsigned 32-Bit-Integer on Win32 | unsigned 64-Bit-Integer on Win64/iOS/Linux }
-     tRecSize    = Longint;    { signed 32-Bit-Integer on Win32   | signed 64-Bit-Integer on Win64/iOS/Linux   }
-     tRecCount   = Longword;   { unsigned 32-Bit-Integer on Win32 | unsigned 64-Bit-Integer on Win64/iOS/Linux }
-{$ENDIF}
-
 Var FileLastError : Longint = 0;
     FileDebugMode : Boolean = False;
 
@@ -56,9 +32,10 @@ Type tPlyFile = object
      Public
        Property FileName:String Read GetFileName;
        Procedure Init;
-       Function  Open(aFileName:String; aRecSize:tRecSize; aFileMode:tFileMode=fmShare) : Boolean;
+       Function  Open(aFileName:String; aRecSize:tFileRecSize;
+                   aFileMode:tFileModeOpen=fmShare) : Boolean;
        Function  Handle : tHandle;
-       Function  Mode : tFilemode;
+       Function  Mode : TFileModeStatus;
        Function  RecSize : Int64;
        Function  IsOpen : Boolean;
        Function  Eof : Boolean;
@@ -66,9 +43,9 @@ Type tPlyFile = object
        Function  Filesize : Longint;
        Function  Seek(FPos:Longint) : Boolean;
        Function  DosRead(Var Daten) : Boolean;
-       Function  BlockRead(Var Daten; RecCount:tRecCount; Out ReadRec:tRecCount) : Boolean;
+       Function  BlockRead(Var Daten; RecCount:tFileRecCount; Out ReadRec:tFileRecCount) : Boolean;
        Function  DosWrite(Var Daten) : Boolean;
-       Function  BlockWrite(Var Daten; RecCount:tRecCount; Out WrittenRec:tRecCount) : Boolean;
+       Function  BlockWrite(Var Daten; RecCount:tFileRecCount; Out WrittenRec:tFileRecCount) : Boolean;
        Procedure Seek_Eof;
        Function  Seek_Read(FPos:Longint; Var Daten) : Boolean;
        Function  Seek_Write(FPos:Longint; Var Daten) : Boolean;
@@ -88,7 +65,7 @@ Type tPlyTextfile = Object
        Property  Filename:String Read GetFilename;
        Procedure Init;
        Function  Handle : tHandle;
-       Function  Mode : tFilemode;
+       Function  Mode : TFileModeStatus;
        Function  GetFilemode : String;
        Function  IsOpen : Boolean;
        Function  Open_Read_Filemode(DName:String; FM:Byte) : Boolean;
@@ -167,8 +144,8 @@ begin
   FindClose(sr);
 end;
 
-Function  FileReset(Var f:File; Const aFileName:String; aRecSize:tRecSize;
-            aFileMode:tFileMode) : Boolean;
+Function  FileReset(Var f:File; Const aFileName:String; aRecSize:tFileRecSize;
+            aFileMode:TFileModeOpen) : Boolean;
 begin
   Try
     System.AssignFile(f, aFileName);
@@ -183,8 +160,8 @@ begin
   End;
 end;
 
-Function  FileRewrite(Var f:File; Const aFileName:String; aRecSize:tRecSize;
-            aFileMode:tFileMode) : Boolean;
+Function  FileRewrite(Var f:File; Const aFileName:String; aRecSize:tFileRecSize;
+            aFileMode:TFileModeOpen) : Boolean;
 begin
   {$I-}
   System.Assign(f, aFileName);
@@ -198,8 +175,8 @@ end;
 (***********************************************************)
 (* Open exsisting file or create file                      *)
 (***********************************************************)
-Function  FileOpen(Var f:File; aFileName:String; aRecSize:tRecSize;
-            aFileMode:tFileMode) : Boolean;
+Function  FileOpen(Var f:File; aFileName:String; aRecSize:tFileRecSize;
+            aFileMode:TFileModeOpen) : Boolean;
 Var lFileSizeByte : Longint;
 begin
   if (aFileName<>'') then
@@ -545,7 +522,8 @@ begin
   FillChar(tFilerec(f),sizeof(tFilerec),#0);
 end;
 
-Function  tPlyFile.Open(aFileName:String; aRecSize:tRecSize; aFileMode:tFileMode=fmShare) : Boolean;
+Function  tPlyFile.Open(aFileName:String; aRecSize:tFileRecSize;
+            aFileMode:TFileModeOpen=fmShare) : Boolean;
 begin
   Init;
   Result := FileOpen(f,aFileName,aRecSize,aFileMode);
@@ -556,7 +534,7 @@ begin
   Result := tFilerec(f).Handle;
 end;
 
-Function  tPlyFile.Mode : tFilemode;
+Function  tPlyFile.Mode : TFileModeStatus;
 begin
   Result := tFilerec(f).Mode;
 end;
@@ -567,7 +545,7 @@ begin
 end;
 
 Function  tPlyFile.IsOpen : Boolean;
-Var FMode : tFileMode;
+Var FMode : TFileModeStatus;
 begin
   FMode := Mode;
   if (FMode=FMINPUT)  or
@@ -641,11 +619,11 @@ begin
   end;
 end;
 
-Function  tPlyFile.BlockRead(Var Daten; RecCount:tRecCount; Out ReadRec:tRecCount) : Boolean;
+Function  tPlyFile.BlockRead(Var Daten; RecCount:tFileRecCount; Out ReadRec:tFileRecCount) : Boolean;
 Var CountByte                : Int64;
     Steps                    : Int64;
     RecCountStep             : Int64;
-    ReadRec_Total            : tRecCount;
+    ReadRec_Total            : tFileRecCount;
     Count_Steps              : Longint;
     DatenPtr                 : PAnsiChar;
 begin
@@ -711,7 +689,7 @@ begin
 end;
 
 Function  tPlyFile.DosWrite(Var Daten) : Boolean;
-Var NumWritten               : tRecCount;
+Var NumWritten               : tFileRecCount;
 begin
   {$I-}
   System.BlockWrite(f,Daten,1,NumWritten);
@@ -720,11 +698,11 @@ begin
   DosWrite := (FileLastError=0);
 end;
 
-Function  tPlyFile.BlockWrite(Var Daten; RecCount:tRecCount; Out WrittenRec:tRecCount) : Boolean;
+Function  tPlyFile.BlockWrite(Var Daten; RecCount:tFileRecCount; Out WrittenRec:tFileRecCount) : Boolean;
 Var CountByte                : Int64;
     Steps                    : Int64;
     AnzRec_Step              : Int64;
-    WriteRec_Total           : tRecCount;
+    WriteRec_Total           : tFileRecCount;
     Count_Steps              : Longint;
     DatenPtr                 : PAnsiChar;
 begin
@@ -939,7 +917,7 @@ begin
   Result := tTextRec(tf).Handle;
 end;
 
-Function  tPlyTextfile.Mode : tFilemode;
+Function  tPlyTextfile.Mode : TFileModeStatus;
 begin
   Result := tTextRec(tf).Mode;
 end;
@@ -1021,7 +999,7 @@ begin
       (* (BOM) in die Datei schreiben                                      *)
       if (UTF8_Bom) then
       begin
-        System.Write(tf,_BOM_Codes[_BOM_UTF8]);
+        System.Write(tf,#$ef + #$bb + #$bf);
       end;
       {$I+}
       FileLastError := IoResult;

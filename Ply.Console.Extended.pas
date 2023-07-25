@@ -2,7 +2,7 @@
 
   Name          : Ply.Console.Extended.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 22.06.2023
+  Last modified : 25.07.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -14,9 +14,11 @@ interface
 
 {$I Ply.Defines.inc}
 
-Uses Crt,
-     Ply.Console,
-     Ply.Types;
+Uses
+  Crt,
+  Ply.Console,
+  Ply.Types,
+  System.Classes;
 
 Type TScreenSaveHelper = Record Helper for TScreenSave
      private
@@ -188,6 +190,13 @@ Function  CodepageSelect(Const Codepage:Cardinal; CP_Source:Cardinal=1) : Cardin
 Function  CodepageSelectInstalled(Const Codepage:Cardinal) : Cardinal;
 Function  CodepageSelectSupported(Const Codepage:Cardinal) : Cardinal;
 
+Type TStringListConsole = Class(TStringList)
+     Private
+       Function  MaxStrLen : Integer;
+     Public
+       Function  Show(Title:String; TextBottom:String='') : Word;
+     end;
+
 Type TSelectSort = (SortUp, SortDown, FValueUp, FValueDown, ShortUp, ShortDown, LongUp, LongDown);
 
 Type tSelectItem             = Record
@@ -279,7 +288,6 @@ Uses
   Ply.Math,
   Ply.StrUtils,
   Ply.SysUtils,
-  System.Classes,
   System.Math,
   System.SysUtils,
   Vcl.Clipbrd,
@@ -338,7 +346,7 @@ end;
 Procedure TScreenSaveHelper.SetFilename(Const aFilename:String);
 begin
   if (aFilename='') then AlternateScreenSaveFilename := '' else
-  if (FilenameGetExtension(aFilename)='')
+  if (PlyFileNameExtension(aFilename)='')
      then AlternateScreenSaveFilename := aFilename + '.ScrDat'
      else AlternateScreenSaveFilename := FilenameReplaceExtension(aFilename,'ScrDat');
 end;
@@ -611,7 +619,7 @@ end;
 Function  TScreenSaveData.WriteData(Var FPos:Integer) : Boolean;
 Var
   aFile : tPlyFile;
-  WrittenRec : tRecCount;
+  WrittenRec : tFileRecCount;
 begin
   Result := False;
   if (Open(aFile)) then
@@ -632,7 +640,7 @@ end;
 Function  TScreenSaveData.ReadData(Const ScreenSaveIndex:tScreenSaveIndex) : Boolean;
 Var
   aFile : tPlyFile;
-  ReadRec : tRecCount;
+  ReadRec : tFileRecCount;
 begin
   Result := False;
   if (Open(aFile)) then
@@ -830,7 +838,7 @@ begin
   if (AlternateConsoleLocationComputerFilename<>'')
      then Result := AlternateConsoleLocationComputerFilename
      else Result := PlyProgDataPath + GetWindowsComputername + '.'
-                  + FilenameWithoutExtension(FilePathName_Exe) + '.CLC';
+                  + ExeFile_NameName + '.CLC';
 end;
 
 Procedure TConsoleLocationComputerHelper.SetFilename(Const aFilename:String);
@@ -874,7 +882,7 @@ begin
   if (AlternateConsoleLocationUserFilename<>'')
      then Result := AlternateConsoleLocationUserFilename
      else Result := PlyProgUserPath + GetWindowsUsername + '.'
-                  + FilenameWithoutExtension(FilePathName_Exe) + '.CLU';
+                  + ExeFile_NameName + '.CLU';
 end;
 
 Procedure TConsoleLocationUserHelper.SetFilename(Const aFilename:String);
@@ -1844,6 +1852,112 @@ begin
   Result := CodepageSelect(Codepage,CP_SUPPORTED);
 end;
 
+(******************************)
+(***** TStringListConsole *****)
+(******************************)
+Function  TStringListConsole.MaxStrLen : Integer;
+var
+  i: Integer;
+begin
+  Result := 0;
+  for i := 0 to Count-1 do
+  begin
+    Result := Max(Result,Length(Strings[i]));
+  end;
+end;
+
+Function  TStringListConsole.Show(Title:String; TextBottom:String='') : Word;
+Var
+  ScreenSave  : tScreenSave;
+  ShowFrom    : TPoint;
+  Key         : Word;
+  LargeWindow : Boolean;
+  MaxLen      : Integer;
+  LineNr      : Integer;
+  CurY        : Integer;
+  aString     : String;
+begin
+  if (Count>0) then
+  begin
+    ScreenSave.Save;
+    LargeWindow := False;
+    MaxLen      := MaxStrLen;
+    if (TextBottom='') then TextBottom := '(ALT+F12) Change window size';
+    Repeat
+      if (LargeWindow) then
+      begin
+        Console.Window(ValueMinMax(MaxLen+2,10,150),ValueMinMax(Count+2,10,80));
+      end else
+      begin
+        Console.Window(ScreenSave.FScreen.Size);
+      end;
+      Window(Title,TextBottom);
+      ShowFrom.Create(1,1);
+      Repeat
+        Clrscr;
+        LineNr := ShowFrom.Y-1;
+        CurY   := 1;
+        Repeat
+          aString := StringReplaceControlCharacter(Strings[LineNr]);
+          WriteXY(1,CurY,Copy(aString,ShowFrom.X,MaxX));
+          inc(LineNr);
+          inc(CurY);
+        Until (LineNr>=Count) or (CurY>MaxY);
+
+        Readkey(Key);
+        if (Key=_down) then
+        begin
+          ShowFrom.Y := ValueMinMax(ShowFrom.Y+1, 1,Count-MaxY+1);
+        end else
+        if (Key=_up) then
+        begin
+          ShowFrom.Y := Max(1,ShowFrom.Y-1);
+        end else
+        if (Key=_PgDown) or (Key=_CTRL_Down)  then
+        begin
+          ShowFrom.Y := Min(ShowFrom.Y+MaxY, Max(1,Count-MaxY+1));
+        end else
+        if (Key=_PgUp)   or (Key=_CTRL_Up)    then
+        begin
+          ShowFrom.Y := Max(1,ShowFrom.Y-MaxY+1);
+        end else
+        if (Key=_Pos1) then ShowFrom.Create(1,1) else
+        if (Key=_End)  then
+        begin
+          ShowFrom.Create(1,Count-MaxY+1);
+        end else
+        if (Key=_Right) then
+        begin
+          ShowFrom.X := ValueMinMax(ShowFrom.X+1, 1,MaxLen - MaxX + 1);
+        end else
+        if (Key=_Left) then
+        begin
+          ShowFrom.X := Max(1,ShowFrom.X-1);
+        end else
+        if (Key=_Ctrl_Right) then
+        begin
+          ShowFrom.X := ValueMinMax(ShowFrom.X+(MaxX-1), 1,MaxLen - MaxX + 1);
+        end else
+        if (Key=_Ctrl_Left )                  then
+        begin
+          ShowFrom.X := Max(1,ShowFrom.X-(MaxX-1));
+        end;
+      until (Key=_ESC)        or  (Key=_Return)      or
+            ((Key>=_0)        and (Key<=_9))         or
+            ((Key>=_F1)       and (Key<=_F12))       or
+            ((Key>=_Shift_F1) and (Key<=_Shift_F12)) or
+            ((Key>=_Ctrl_F1)  and (Key<=_Ctrl_F12))  or
+            ((Key>=_Alt_F1)   and (Key<=_Alt_F11))   or
+            ((Key>=_ALT_A)    and (Key<=_ALT_Z))     or
+            ((Key>=_CTRL_B)   and (Key<=_CTRL_Z))    or
+            (Key=_Alt_F12)    or  (Key=_F1);
+      if (Key=_Alt_F12) then LargeWindow := not(LargeWindow);
+    Until (Key<>_F1) and (Key<>_Alt_F12) and (Key<>_F1) and (Key<>_CTRL_F);
+    ScreenSave.Restore;
+  end;
+  Result := Key;
+end;
+
 (***********************)
 (***** tSelectItem *****)
 (***********************)
@@ -2524,7 +2638,7 @@ begin
           (Key=_ALT_Minus)  or  (Key=_ALT_Plus)  or
           (Key=_TAB)        or
           (Key=_Insert)     or  (Key=_ALT_Insert) or
-          (Key=_CRT_DELETE)     or  (Key=_ALT_Delete);
+          (Key=_CRT_DELETE) or  (Key=_ALT_Delete);
     if (Key=_Return)     or  (Key=_TAB)       or
        ((Key>=_F1)       and (Key<=_F12))     or
        ((Key>=_ALT_1)    and (Key<=_ALT_4))   or
@@ -2643,4 +2757,5 @@ initialization
   Proc_CTRL_ALTGR_0_9  := ConsoleLocationSaveUser;
   Proc_CTRL_ALT_L      := ScreenSelectFromFile;
   Proc_CTRL_ALT_S      := ScreenSaveToFile;
+  ConsoleLocationMoveUser(0);
 end.

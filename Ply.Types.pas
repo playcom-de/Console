@@ -75,11 +75,13 @@ Const FM_R        = $00; (* #00 Filemode read only                            *)
       fmDenyRW    = FM_RW+FM_Deny_RW; (* $12 = #18 = exclusiv, deny RW        *)
       fmDenyW     = FM_RW+FM_Deny_W;  (* $22 = #34 = exclusiv, deny W         *)
       // nwDenyR  = FM_RW+FM_Deny_R;  (* $32 = #50 = exclusiv, deny R         *)
-      fmReadShare = FM_R +FM_Deny_No; (* $40 = #64                            *)
+      fmShareR    = FM_R +FM_Deny_No; (* $40 = #64                            *)
       fmShare     = FM_RW+FM_Deny_No; (* $42 = #66 = standard                 *)
 
 Type AStr3         = String[3];
      AStr4         = String[4];
+     AChar3        = Array [0..2] of AnsiChar;
+     AChar4        = Array [0..3] of AnsiChar;
      WStr20        = Array [0..19] of WideChar;
      WStr30        = Array [0..29] of WideChar;
      TDynStr       = TArray<WideChar>;
@@ -90,22 +92,6 @@ Type AStr3         = String[3];
      CP437String   = Type AnsiString(_Codepage_437);
      CP850String   = Type AnsiString(_Codepage_850);
      CP1252String  = Type AnsiString(_Codepage_1252);
-
-Const _BOM_UTF8     = 1;
-      _BOM_UTF16_BE = 2;
-      _BOM_UTF16_LE = 3;
-      _BOM_UTF32_BE = 4;
-      _BOM_UTF32_LE = 5;
-      _BOM_Max      = 5;
-      _BOM_Codes : Array [1.._BOM_Max] of AStr4 =
-        (#$ef + #$bb + #$bf            (* UTF8     *)
-        ,#$fe + #$ff                   (* UTF16_BE *)
-        ,#$ff + #$fe                   (* UTF16_LE *)
-        ,#$00 + #$00 + #$fe + #$ff     (* UTF32_BE *)
-        ,#$ff + #$fe + #$00 + #$00);   (* UTF32_LE *)
-      _BOM_Codepage : Array [1.._BOM_Max] of Longint =
-        (_Codepage_UTF8    ,_Codepage_UTF16_BE,_Codepage_UTF16_LE
-        ,_Codepage_UTF16_BE,_Codepage_UTF16_LE);
 
 // WideChar - Unicode-Char - ASCII-Signs
 Const _0_low                   = $2080;  (* #8320 ₀                           *)
@@ -216,6 +202,13 @@ Type
   TConHandle              = Winapi.Windows.THandle;
   // TFileSize
   TFileSize               = Int64;
+  // TFileMode
+  TFileModeOpen           = Byte;
+  TFileModeStatus         = Word;
+  // TFileRecSize
+  TFileRecSize            = Integer;
+  // TFileRecCount
+  TFileRecCount           = Integer;
   // TFileAttribute
   TPlyFileAttribute       = Integer;
   // TConsoleScreenPoint  : Coord of Smallint (16-Bit) (Char: Size(X,Y) or Point(X,Y))
@@ -270,12 +263,14 @@ Type
 
   TSmallRectHelper = record helper for TSmallRect
   private
-    Function GetWidth : Smallint;
-    Function GetHeight : Smallint;
-    Function GetSize : TSmallPoint;
-    Function GetTopLeft : TSmallPoint;
+    Function  GetWidth : Smallint;
+    Procedure SetWidth(Const Value: Smallint);
+    Function  GetHeight : Smallint;
+    Procedure SetHeight(Const Value: Smallint);
+    Function  GetSize : TSmallPoint;
+    Function  GetTopLeft : TSmallPoint;
     Procedure SetTopLeft(Value: TSmallPoint);
-    Function GetBottomRight : TSmallPoint;
+    Function  GetBottomRight : TSmallPoint;
     Procedure SetBottomRight(Value: TSmallPoint);
   public
     Function ToStringRect: String;
@@ -292,10 +287,10 @@ Type
     class operator NotEqual(Lhs, Rhs: TSmallRect) : Boolean;
     {$ENDIF DELPHI10UP}
     procedure NormalizeRect;
-    Property Width : Smallint Read GetWidth;
-    Property Height : Smallint Read GetHeight;
-    Property Size : TSmallPoint Read GetSize;
-    Property TopLeft : TSmallPoint Read GetTopLeft Write SetTopLeft;
+    Property Width       : Smallint    Read GetWidth       Write SetWidth;
+    Property Height      : Smallint    Read GetHeight      Write SetHeight;
+    Property Size        : TSmallPoint Read GetSize;
+    Property TopLeft     : TSmallPoint Read GetTopLeft     Write SetTopLeft;
     Property BottomRight : TSmallPoint Read GetBottomRight Write SetBottomRight;
   end;
 
@@ -335,20 +330,22 @@ Type
   // Zero-Base-Values : (0,0,79,24) for Standardsize
   TPlyConWinSize = record
   private
-    Function GetWidth : Smallint;
-    Function GetHeight : Smallint;
-    Function GetWindMin : Word;
+    Function  GetWidth : Smallint;
+    Procedure SetWidth(Const Value:SmallInt);
+    Function  GetHeight : Smallint;
+    Procedure SetHeight(Const Value:SmallInt);
+    Function  GetWindMin : Word;
     Procedure SetWindMin(Const Value:Word);
-    Function GetWindMax : Word;
+    Function  GetWindMax : Word;
     Procedure SetWindMax(Const Value:Word);
   public
     Procedure Clear;
     Function ToStringRect : String;
     Function ToStringSize : String;
-    Property Width : Smallint Read GetWidth;
-    Property Height : Smallint Read GetHeight;
-    Property WindMin : Word Read GetWindMin Write SetWindMin;
-    Property WindMax : Word Read GetWindMax Write SetWindMax;
+    Property Width   : Smallint Read GetWidth   Write SetWidth;
+    Property Height  : Smallint Read GetHeight  Write SetHeight;
+    Property WindMin : Word     Read GetWindMin Write SetWindMin;
+    Property WindMax : Word     Read GetWindMax Write SetWindMax;
   case Integer of
     0: (Left, Top,  Right, Bottom: Smallint);
     1: (MinX, MinY, MaxX,  MaxY  : Smallint);
@@ -576,9 +573,9 @@ begin
 end;
 {$ENDIF DELPHI10UP}
 
-(*************************************)
-(***** TConsoleWindowPointHelper *****)
-(*************************************)
+(*****************************)
+(***** TSmallPointHelper *****)
+(*****************************)
 procedure TSmallPointHelper.Clear;
 begin
   X := 0;
@@ -624,9 +621,19 @@ begin
   Result := Right - Left + 1;
 end;
 
+Procedure TSmallRectHelper.SetWidth(Const Value: Smallint);
+begin
+  if (Value>=1) then Right := Left + Value;
+end;
+
 Function TSmallRectHelper.GetHeight : Smallint;
 begin
   Result := Bottom - Top + 1;
+end;
+
+Procedure TSmallRectHelper.SetHeight(const Value: SmallInt);
+begin
+  if (Value>=1) then Bottom := Top + Value;
 end;
 
 Function TSmallRectHelper.GetSize : TSmallPoint;
@@ -849,9 +856,19 @@ begin
   Result := Right - Left + 1;
 end;
 
+Procedure TPlyConWinSize.SetWidth(Const Value:SmallInt);
+begin
+  Left := Right + Value;
+end;
+
 Function TPlyConWinSize.GetHeight : Smallint;
 begin
   Result := Bottom - Top + 1;
+end;
+
+Procedure TPlyConWinSize.SetHeight(const Value: SmallInt);
+begin
+  Bottom := Top + Value;
 end;
 
 Function TPlyConWinSize.GetWindMin : Word;
@@ -960,7 +977,9 @@ end;
 
 Function  TBoolean32.GetBool32(Index:Byte) : Boolean;
 begin
-  Result := (FValue and BitValue32[Index]) = BitValue32[Index];
+  if (Index<=31)
+     then Result := (FValue and BitValue32[Index]) = BitValue32[Index]
+     else Result := False;
 end;
 
 Procedure TBoolean32.Clear;

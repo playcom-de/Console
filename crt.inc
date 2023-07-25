@@ -188,7 +188,6 @@ Const
   _Return_NumPad             = $008F; (* #143                                *)
   _PLUS                      = $00BB; (* #187 = +                            *)
   _MINUS                     = $00BD; (* #189 = -                            *)
-  // German Umlauts ÄäÖöÜüß
   _UE                        = $00BA; (* #186 = German Umlaut ü              *)
   _OE                        = $00C0; (* #192 = German Umlaut ö              *)
   _SS                        = $00DB; (* #219 = German Umlaut ß              *)
@@ -205,6 +204,9 @@ Const
   _SHIFT_DELETE              = $4C2E; (* #19502                              *)
   _SHIFT_A                   = $4C41; (* #19521                              *)
   _SHIFT_Z                   = $4C5A; (* #19546                              *)
+  _SHIFT_UE                  = $4CBA; (* #19642 = German Umlaut Ü            *)
+  _SHIFT_OE                  = $4CC0; (* #19648 = German Umlaut Ö            *)
+  _SHIFT_AE                  = $4CDE; (* #19678 = German Umlaut Ü            *)
   _SHIFT_F1                  = $4C70; (* #19568                              *)
   _SHIFT_F2                  = $4C71; (* #19569                              *)
   _SHIFT_F3                  = $4C72; (* #19570                              *)

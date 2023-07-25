@@ -19,21 +19,38 @@ Uses
   System.Classes,
   System.SysUtils;
 
-Function  PosRight(Substr,aString:String) : Longint;
+Function  PosRight(SubStr, sString: ShortString) : Integer; Overload;
+Function  PosRight(SubStr, uString: UnicodeString) : Integer; Overload;
 Function  StrCountChar(ch:Char; Help:String) : Longword;
 Function  StrGetNumbers(Help:String) : String;
 Function  ValidateEmail(Const aEmail: string): Boolean;
 Function  ValidateDate(Const aDate: String) : Boolean;
 
-Function  StringAlignLeft(Count:Integer; aString:ShortString; ch:AnsiChar=' '; Cut:Boolean=False) : UnicodeString; Overload;
-Function  StringAlignLeft(Count:Integer; aString:AnsiString; ch:AnsiChar=' '; Cut:Boolean=False) : AnsiString; Overload;
-Function  StringAlignLeft(Count:Integer; uString:UnicodeString; ch:WideChar=' '; Cut:Boolean=False) : UnicodeString; Overload;
-Function  StringAlignRight(Count:Integer; uString:UnicodeString; ch:WideChar=' ') : UnicodeString;
+Function  StringCopyRight(sString:ShortString; Count:Integer) : ShortString; Overload;
+Function  StringCopyRight(aString:RawByteString; Count:Integer) : RawByteString; Overload;
+Function  StringCopyRight(uString:UnicodeString; Count:Integer) : UnicodeString; Overload;
+
+Function  StringAlignLeft(Count:Integer; sString:ShortString; ch:AnsiChar=' ';
+            Cut:Boolean=False) : ShortString; Overload;
+Function  StringAlignLeft(Count:Integer; aString:RawByteString; ch:AnsiChar=' ';
+            Cut:Boolean=False) : RawByteString; Overload;
+Function  StringAlignLeft(Count:Integer; uString:UnicodeString; ch:WideChar=' ';
+            Cut:Boolean=False) : UnicodeString; Overload;
+
+Function  StringAlignRight(Count:Integer; sString:ShortString; ch:AnsiChar=' ';
+            Cut:Boolean=False) : ShortString; Overload;
+Function  StringAlignRight(Count:Integer; aString:RawByteString; ch:AnsiChar=' ';
+            Cut:Boolean=False) : RawByteString; Overload;
+Function  StringAlignRight(Count:Integer; uString:UnicodeString; ch:WideChar=' ';
+            Cut:Boolean=False) : UnicodeString; Overload;
+
 Function  StringOfChar(Count:Integer) : UnicodeString; Overload;
 Function  StringOfChar(ch:AnsiChar; Count:Integer) : UnicodeString; Overload;
 Function  StringOfChar(ch:Word; Count:Integer) : UnicodeString; Overload;
+
           // Leading Spaces
-Function  IntToString(Value:Int64; Width:Integer=0; ThousendSeperator:WideChar='?') : UnicodeString;
+Function  IntToString(Value:Int64; Width:Integer=0;
+            ThousendSeperator:WideChar='?') : UnicodeString;
           // LZ = Leading Zeros
 Function  IntToStringLZ(Value:Int64; MinDigits:Integer=3) : UnicodeString;
 
@@ -62,10 +79,6 @@ Function  GetWindowsComputername : String;
 
 Function  DataEqual(Var Data1,Data2; Size:Longword) : Boolean;
 
-Function  Filename_Exe : String;
-Function  Filepath_Exe : String;
-Function  FilePathName_Exe : String;
-
           // %APPDATA% - C:\Users\USERNAME\AppData\Roaming\
 Function  Filepath_AppDataRoaming : String;
           // %LOCALAPPDATA% - C:\Users\USERNAME\AppData\Local\
@@ -84,10 +97,28 @@ Function  FilenameCheckFilter(Filename:String; Filter:String;
             CaseSensitiv:Boolean=False) : Boolean; Overload;
 Function  FilenameCheckFilter(Filename:String; Var Filter:TStringList;
             CaseSensitiv:Boolean=False) : Boolean; Overload;
-Function  FilenameGetExtension(Const Filename:String) : String;
+
+          // ExeFilePathName: 'C:\Program Files\Company\MyProg.exe'
+Function  ExeFile_Filename : String;
+          // ExeFilePath : 'C:\Program Files\Company\'
+Function  ExeFile_Path : String;
+          // ExeFileName: 'MyProg.exe'
+Function  ExeFile_Name : String;
+          // ExeFileNameName: 'MyProg'
+Function  ExeFile_NameName : String;
+
+          // PlyFilePath: 'C:\Windows\notepad.exe' -> 'C:\Windows\'
+Function  PlyFilePath(Filename:String) : String;
+          // PlyFileName: 'C:\Windows\notepad.exe' -> 'notepad.exe'
+Function  PlyFileName(Filename:String) : String;
+          // PlyFileNameName: 'C:\Windows\notepad.exe' -> 'notepad'
+Function  PlyFileNameName(Filename:String) : String;
+          // PlyFileNameExtension 'C:\Windows\notepad.exe' -> 'exe'
+Function  PlyFileNameExtension(Const Filename:String) : String;
+
 Function  FilenameReplaceExtension(Const Filename:String; Const NewExtension:String) : String;
 Function  FilenameReplacePlaceholder(Const Filename:String; ReplaceDateTime:tDateTime) : String;
-Function  FilenameWithoutExtension(Const FileName:String) : String;
+
 Function  ExtractParrentFilePath(aPath:String) : String;
 
 Function  CharIsArithmeticOperator(wch:WideChar) : Boolean;
@@ -95,11 +126,14 @@ Function  StringHasArithmeticOperator(Const uString:UnicodeString) : Boolean;
 
 Function  CharIsControlCharacter(ach:AnsiChar) : Boolean; Overload;
 Function  CharIsControlCharacter(wch:WideChar) : Boolean; Overload;
+
 Function  CharIsWrapCharacter(ach:AnsiChar) : Boolean; Overload;
 Function  CharIsWrapCharacter(wch:WideChar) : Boolean; Overload;
 
+Function  StringDeleteControlCharacter(sString:ShortString) : ShortString; Overload;
 Function  StringDeleteControlCharacter(aString:AnsiString) : AnsiString; Overload;
 Function  StringDeleteControlCharacter(uString:UnicodeString) : UnicodeString; Overload;
+
 Function  StringReplaceControlCharacter(uString:UnicodeString) : UnicodeString;
 Function  StringPosControlCharacter(uString:UnicodeString; Offset:Longword=1) : Integer;
 Function  StringPosWrapWord(uString:UnicodeString; MaxLen:Integer; Offset:Integer=1) : Integer;
@@ -130,6 +164,7 @@ Function  Char_CP1252_Unicode(ch:AnsiChar) : WideChar;
 Function  Char_Unicode_CP1252(wc:WideChar) : AnsiChar;
 
 Function  Str_CP850_UTF8(aString:RawByteString) : UTF8String;
+
 Function  Str_CP850_Unicode(sString:ShortString; ReplaceControlCode:Boolean=False) : UnicodeString; Overload;
 Function  Str_CP850_Unicode(cString:CP850String; ReplaceControlCode:Boolean=False) : UnicodeString; Overload;
 
@@ -137,6 +172,7 @@ Function  Str_CP1252_CP850(Const cString:RawByteString) : RawByteString;
 Function  Str_CP1252_Unicode(Const cString:CP1252String) : UnicodeString;
 
 Function  Str_Unicode_CP850(Const uString:UnicodeString) : CP850String;
+Function  Str_Unicode_RawByteString(Const uString:UnicodeString) : RawByteString;
 Function  Str_Unicode_ShortString(Const uString:UnicodeString) : ShortString;
 
 Function  Guess_UTF8(Const Bytes:TBytes) : Boolean; Overload;
@@ -179,27 +215,38 @@ begin
   end;
 end;
 
-Function  PosRight(Substr,aString:String) : Longint;
-Var len_SubStr,Len_aString   : Longint;
-    SPos                     : Longint;
-    Found                    : Boolean;
+Function  PosRight(SubStr, sString: ShortString) : Integer;
+Var
+  Offset : Integer;
+  CurPos : Integer;
 begin
-  PosRight    := 0;
-  Len_SubStr  := length(SubStr);
-  Len_aString := length(aString);
-  if (Len_SubStr<=Len_aString) then
-  begin
-    Found := False;
-    SPos  := Len_aString - Len_SubStr + 1;
-    Repeat
-      if (Copy(aString,SPos,Len_SubStr)=Substr) then
-      begin
-        Found    := True;
-        PosRight := SPos;
-      end;
-      dec(SPos);
-    Until (Found) or (SPos=0);
-  end;
+  Result := 0;
+  Offset := 1;
+  Repeat
+    CurPos := Pos(SubStr, sString, Offset);
+    if (CurPos>0) then
+    begin
+      Result := CurPos;
+      Offset := CurPos+1;
+    end;
+  Until (CurPos=0);
+end;
+
+Function  PosRight(SubStr, uString: UnicodeString) : Integer;
+Var
+  Offset : Integer;
+  CurPos : Integer;
+begin
+  Result := 0;
+  Offset := 1;
+  Repeat
+    CurPos := Pos(SubStr, uString, Offset);
+    if (CurPos>0) then
+    begin
+      Result := CurPos;
+      Offset := CurPos+1;
+    end;
+  Until (CurPos=0);
 end;
 
 Function  StrCountChar(ch:Char; Help:String) : Longword;
@@ -253,12 +300,58 @@ begin
   Result := Help;
 end;
 
-Function  StringAlignLeft(Count:Integer; aString:ShortString; ch:AnsiChar=' '; Cut:Boolean=False) : UnicodeString;
+Function  StringCopyRight(sString:ShortString; Count:Integer) : ShortString;
 begin
-  Result := StringAlignLeft(Count,Str_CP850_Unicode(aString),WideChar(ch),Cut);
+  if (Count>=length(sString)) then
+  begin
+    Result := sString;
+  end else
+  begin
+    Result := Copy(sString,Length(sString)-Count+1,Count);
+  end;
 end;
 
-Function  StringAlignLeft(Count:Integer; aString:AnsiString; ch:AnsiChar=' '; Cut:Boolean=False) : AnsiString;
+Function  StringCopyRight(aString:RawByteString; Count:Integer) : RawByteString; Overload;
+begin
+  if (Count>=length(aString)) then
+  begin
+    Result := aString;
+  end else
+  begin
+    Result := Copy(aString,Length(aString)-Count+1,Count);
+  end;
+end;
+
+Function  StringCopyRight(uString:UnicodeString; Count:Integer) : UnicodeString;
+begin
+  if (Count>=length(uString)) then
+  begin
+    Result := uString;
+  end else
+  begin
+    Result := Copy(uString,Length(uString)-Count+1,Count);
+  end;
+end;
+
+Function  StringAlignLeft(Count:Integer; sString:ShortString; ch:AnsiChar=' ';
+            Cut:Boolean=False) : ShortString;
+begin
+  Count := ValueMinMax(Count,0,255);
+  // if aString has an invalid value, then set as empty string
+  if (sString=#0) then sString := '';
+  // if ch has an invalid value, then set to space
+  if (ch=#0) or (ch='') then ch := #32;
+
+  While (length(sString) < Count) do
+  begin
+    sString := sString + ch;
+  end;
+  if (Cut) then Result := Copy(sString,1,Count)
+           else Result := sString;
+end;
+
+Function  StringAlignLeft(Count:Integer; aString:RawByteString; ch:AnsiChar=' ';
+            Cut:Boolean=False) : RawByteString;
 begin
   // if aString has an invalid value, then set as empty string
   if (aString=#0) then aString := '';
@@ -273,7 +366,8 @@ begin
            else Result := aString;
 end;
 
-Function  StringAlignLeft(Count:Integer; uString:UnicodeString; ch:WideChar=' '; Cut:Boolean=False) : UnicodeString;
+Function  StringAlignLeft(Count:Integer; uString:UnicodeString; ch:WideChar=' ';
+            Cut:Boolean=False) : UnicodeString;
 begin
   // if aString has an invalid value, then set as empty string
   if (uString=#0) then uString := '';
@@ -288,12 +382,49 @@ begin
            else Result := uString;
 end;
 
-Function  StringAlignRight(Count:Integer; uString:UnicodeString; ch:WideChar=' ') : UnicodeString;
+Function  StringAlignRight(Count:Integer; sString:ShortString; ch:AnsiChar=' ';
+            Cut:Boolean=False) : ShortString;
+begin
+  // if aString has an invalid value, then set as empty string
+  if (sString=#0) then sString := '';
+  // if ch has an invalid value, then set to space
+  if (ch=#0) or (ch='') then ch := #32;
+
+  if (Cut) then sString := StringCopyRight(sString,Count);
+
+  While (length(sString) < Count) do
+  begin
+    sString := ch + sString;
+  end;
+  Result := sString;
+end;
+
+Function  StringAlignRight(Count:Integer; aString:RawByteString; ch:AnsiChar=' ';
+            Cut:Boolean=False) : RawByteString;
+begin
+  // if aString has an invalid value, then set as empty string
+  if (aString=#0) then aString := '';
+  // if ch has an invalid value, then set to space
+  if (ch=#0) or (ch='') then ch := #32;
+
+  if (Cut) then aString := StringCopyRight(aString,Count);
+
+  While (length(aString) < Count) do
+  begin
+    aString := ch + aString;
+  end;
+  Result := aString;
+end;
+
+Function  StringAlignRight(Count:Integer; uString:UnicodeString; ch:WideChar=' ';
+            Cut:Boolean=False) : UnicodeString;
 begin
   // if aString has an invalid value, then set as empty string
   if (uString=#0) then uString := '';
   // if ch has an invalid value, then set to space
   if (ch=#0) or (ch='') then ch := #32;
+
+  if (Cut) then uString := StringCopyRight(uString,Count);
 
   While (length(uString) < Count) do
   begin
@@ -626,21 +757,6 @@ begin
   DataEqual := Equal;
 end;
 
-Function  Filename_Exe : String;
-begin
-  Result := ExtractFileName(ParamStr(0));
-end;
-
-Function  Filepath_Exe : String;
-begin
-  Result := ExtractFilePath(ParamStr(0));
-end;
-
-Function  FilePathName_Exe : String;
-begin
-  Result := ParamStr(0);
-end;
-
 Function  Filepath_AppDataRoaming : String;
 begin
   Result := GetFolderPath(FOLDERID_RoamingAppData);
@@ -835,9 +951,44 @@ begin
   end;
 end;
 
-Function  FilenameGetExtension(Const Filename:String) : String;
+Function  ExeFile_Filename : String;
 begin
-  Result := System.IOUtils.TPath.GetExtension(FileName);
+  Result := ParamStr(0);
+end;
+
+Function  ExeFile_Path : String;
+begin
+  Result := PlyFilePath(ParamStr(0));
+end;
+
+Function  ExeFile_Name : String;
+begin
+  Result := PlyFileName(ParamStr(0));
+end;
+
+Function  ExeFile_NameName : String;
+begin
+  Result := PlyFileNameName(ParamStr(0));
+end;
+
+Function  PlyFilePath(Filename:String) : String;
+begin
+  Result := System.SysUtils.ExtractFilePath(Filename);
+end;
+
+Function  PlyFileName(Filename:String) : String;
+begin
+  Result := System.SysUtils.ExtractFileName(Filename);
+end;
+
+Function  PlyFileNameName(Filename:String) : String;
+begin
+  Result := System.IOUtils.TPath.GetFileNameWithoutExtension(Filename);
+end;
+
+Function  PlyFileNameExtension(Const Filename:String) : String;
+begin
+  Result := ReplaceStr(System.IOUtils.TPath.GetExtension(FileName),'.','');
 end;
 
 Function  FilenameReplaceExtension(Const Filename:String; Const NewExtension:String) : String;
@@ -875,11 +1026,6 @@ begin
   Result := ReplaceStr(Result,'%YYYYMM%',Copy(ReplaceDateTime.YYYYMMDD,1,6));
   (* %DOY% -> DDD = Day of Year 001..366 *)
   Result := ReplaceStr(Result,'%DOY%',IntToStringLZ(ReplaceDateTime.DayOfYear,3));
-end;
-
-Function  FilenameWithoutExtension(Const FileName:String) : String;
-begin
-  Result := System.IOUtils.TPath.GetFileNameWithoutExtension(FileName);
 end;
 
 // ParentDir is returned with backslash at the end
@@ -956,6 +1102,19 @@ end;
 Function  CharIsWrapCharacter(wch:WideChar) : Boolean;
 begin
   Result := CharInSet(wch,WrapCharacter);
+end;
+
+Function  StringDeleteControlCharacter(sString:ShortString) : ShortString; Overload;
+Var i : Integer;
+begin
+  for i := Length(sString) downto 1 do
+  begin
+    if (CharIsControlCharacter(sString[i])) then
+    begin
+      Delete(sString,i,1);
+    end;
+  end;
+  Result := sString;
 end;
 
 Function  StringDeleteControlCharacter(aString:AnsiString) : AnsiString;
@@ -2222,29 +2381,42 @@ end;
 Function  Str_Unicode_CP850(Const uString:UnicodeString) : CP850String;
 var
   i : Integer;
-  Help : CP850String;
+  cString : CP850String;
 begin
-  SetLength(Help,length(uString));
+  SetLength(cString,length(uString));
   for i := 1 to length(uString) do
   begin
-    Help[i] := Char_Unicode_CP850(uString[i]);
+    cString[i] := Char_Unicode_CP850(uString[i]);
   end;
-  Result := Help;
+  Result := cString;
+end;
+
+Function  Str_Unicode_RawByteString(Const uString:UnicodeString) : RawByteString;
+var
+  i : Integer;
+  rString : CP850String;
+begin
+  SetLength(rString,length(uString));
+  for i := 1 to length(uString) do
+  begin
+    rString[i] := Char_Unicode_CP850(uString[i]);
+  end;
+  Result := rString;
 end;
 
 Function  Str_Unicode_ShortString(Const uString:UnicodeString) : ShortString;
 var
   i : Integer;
   sLen : Byte;
-  Help : ShortString;
+  sString : ShortString;
 begin
   sLen := Min(255,length(uString));
-  SetLength(Help,sLen);
+  SetLength(sString,sLen);
   for i := 1 to sLen do
   begin
-    Help[i] := Char_Unicode_CP850(uString[i]);
+    sString[i] := Char_Unicode_CP850(uString[i]);
   end;
-  Result := Help;
+  Result := sString;
 end;
 
 // Most of the special-characters in CP850 and/or CP1252 are coded in UTF8
@@ -2293,7 +2465,7 @@ end;
 
 initialization
   Ignore_CP850_UTF8 := [];
-  PlyAppName := TPath.GetFileNameWithoutExtension(FilePathName_Exe);
+  PlyAppName := ExeFile_NameName;
 end.
 
 

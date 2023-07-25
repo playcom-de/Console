@@ -2,7 +2,7 @@
 
   Name          : Ply.Console.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 20.06.2023
+  Last modified : 25.07.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -754,7 +754,6 @@ Type tConsole = Class
 
        Function  GetCursorPosition : TConsoleWindowPoint;
        Procedure SetCursorPosition(Const CursorPositionNew:TConsoleWindowPoint); overload;
-       Procedure SetCursorPosition(Const X,Y:Smallint); overload;
 
        Function  GetTitle: string;
        Function  GetOriginalTitle : String;
@@ -799,6 +798,11 @@ Type tConsole = Class
        // the screen, the position of the window will be shifted
        Procedure AutofitPosition; overload;
 
+       Procedure ReadkeyScroll(Var Key:Word);
+       Procedure BufferScroll(x,y:integer); Overload;
+       Procedure BufferScroll(BufferPos:TSmallPoint); Overload;
+       Procedure Buffer(Const SizeX,SizeY:Smallint; ClrBuffer:Boolean=True);
+
        // WindowRect: coordinates of the window within the buffer (rows & lines)
        Property  WindowRect : TConsoleWindowRect Read GetWindowRect;
        // WindowSize: Console-Window-Size as (Right-Left | Bottom-Top)
@@ -838,6 +842,7 @@ Type tConsole = Class
        // OriginalTitle: original title for the current console window (ReadOnly)
        Property  OriginalTitle : String Read GetOriginalTitle;
 
+       Procedure SetCursorPosition(Const X,Y:Smallint); overload;
        // CursorPosition: colums & line of the cursor-position
        Property  CursorPosition : TConsoleWindowPoint Read GetCursorPosition Write SetCursorPosition;
        // CursorPositionX: colum of the cursor-position
@@ -1151,37 +1156,29 @@ begin
   end else Result := True;
 end;
 
-Function  GetConBufferInfoEx(Var ConsoleBufferInfoEx:TConsoleBufferinfoEx) : Boolean;
+Procedure GetConBufferInfoEx(Var ConsoleBufferInfoEx:TConsoleBufferinfoEx);
 begin
   FillChar(ConsoleBufferInfoEx,sizeof(ConsoleBufferInfoEx),#0);
   ConsoleBufferInfoEx.cbSize := sizeof(TConsoleBufferinfoEx);
   {$IFDEF FPC}
-  if (GetConsoleBufferInfoEx(ConHandleStdOut, @ConsoleBufferInfoEx)) then
+  if not(GetConsoleBufferInfoEx(ConHandleStdOut, @ConsoleBufferInfoEx)) then
   {$ELSE}
-  if (GetConsoleBufferInfoEx(ConHandleStdOut, ConsoleBufferInfoEx)) then
+  if not(GetConsoleBufferInfoEx(ConHandleStdOut, ConsoleBufferInfoEx)) then
   {$ENDIF}
   begin
-    Result := True;
-  end else
-  begin
     raise EConsoleApiError.Create('GetConsoleScreenBufferInfoEx;'+SysErrorMessage(GetLastError));
-    Result := False;
   end;
 end;
 
-Function  SetConBufferInfoEx(Var ConsoleBufferInfoEx:TConsoleBufferinfoEx) : Boolean;
+Procedure SetConBufferInfoEx(Var ConsoleBufferInfoEx:TConsoleBufferinfoEx);
 begin
   {$IFDEF FPC}
-  if (SetConsoleScreenBufferInfoEx(ConHandleStdOut, @ConsoleScreenBufferInfoEx)) then
+  if not(SetConsoleScreenBufferInfoEx(ConHandleStdOut, @ConsoleScreenBufferInfoEx)) then
   {$ELSE}
-  if (SetConsoleBufferInfoEx(ConHandleStdOut,ConsoleBufferInfoEx)) then
+  if not(SetConsoleBufferInfoEx(ConHandleStdOut,ConsoleBufferInfoEx)) then
   {$ENDIF}
   begin
-    Result := True;
-  end else
-  begin
     raise EConsoleApiError.Create('SetConsoleScreenBufferInfoEx;'+SysErrorMessage(GetLastError));
-    Result := False;
   end;
 end;
 
@@ -2595,7 +2592,7 @@ end;
 Function  tConsoleRegistry.GetKey : String;
 begin
   Result := 'Software\'+PlyCompanyName+'\'
-          + FilenameWithoutExtension(Filename_Exe) + '\';
+          + ExeFile_NameName + '\';
 end;
 
 Function  tConsoleRegistry.GetKeyFeatureGlobal : String;
@@ -2606,7 +2603,7 @@ end;
 Function  tConsoleRegistry.GetKeyFeatureLocal : String;
 begin
   Result := 'Console\'
-          + StringReplace(FilePathName_Exe,'\','_',[rfReplaceAll]) + '\';
+          + StringReplace(ExeFile_Filename,'\','_',[rfReplaceAll]) + '\';
 end;
 
 Procedure tConsoleRegistry.IncCounter(Const CounterName:String);
@@ -3189,8 +3186,12 @@ Var TargetConsoleRect        : TConsoleDesktopRect;
     WindowSizeHelp           : TConsoleWindowPoint;
 begin
   Try
+    // Retrieve current ScreenBufferInfo
+    // The user might have changed the window size
+    GetScreenBufferInfo;
     // Do nothing if WindowSizeNew = actuall size
-    if (WindowSizeNew<>WindowSize) then
+    if (WindowSizeNew<>WindowSize) or
+       (WindowSizeNew<>BufferSize) then
     begin
       // WindowSizeNew must be at least WindowSizeMin
       WindowSizeNew.Normalize(WindowSizeMin);
@@ -3209,13 +3210,13 @@ begin
       // if the window decreases, the window has to be reduced first
 
       // Window gets reduced -> First reduce size to avoid exceptions
-      if (WindowSizeNew.X<Console.WindowSize.X) or
-         (WindowSizeNew.Y<Console.WindowSize.Y) then
+      if (WindowSizeNew.X<WindowSize.X) or
+         (WindowSizeNew.Y<WindowSize.Y) then
       begin
         // Perhaps smaller than target size
-        WindowSizeHelp.X   := Max(1,Min(Console.WindowSize.X,WindowSizeNew.X-1));
-        WindowSizeHelp.Y   := Max(1,Min(Console.WindowSize.Y,WindowSizeNew.Y-1));
-        Console.WindowSize := WindowSizeHelp;
+        WindowSizeHelp.X := Max(1,Min(WindowSize.X,WindowSizeNew.X-1));
+        WindowSizeHelp.Y := Max(1,Min(WindowSize.Y,WindowSizeNew.Y-1));
+        WindowSize       := WindowSizeHelp;
       end;
 
       // Check if the window fits on the screen in the new size
@@ -3224,8 +3225,8 @@ begin
       begin
         // Has only to be checked, if the target-size of the window is larger
         // then the current-size of the window
-        if (WindowSizeNew.X>Console.WindowSize.X) or
-           (WindowSizeNew.Y>Console.WindowSize.Y) then
+        if (WindowSizeNew.X>WindowSize.X) or
+           (WindowSizeNew.Y>WindowSize.Y) then
         begin
           // Autofit the fontsize of the console-window
           Console.AutofitFontsize(WindowSizeNew);
@@ -3236,8 +3237,8 @@ begin
       Console.BufferSize := WindowSizeNew;
 
       // Set Consol-Window-Size to target size
-      Console.WindowSize := WindowSizeNew;
-      Crt.WindSize.SmallRect := Console.WindowRect;
+      WindowSize := WindowSizeNew;
+      Crt.WindSize.SmallRect := WindowRect;
 
       // If go back to default-size (80x25), check if a default-pos (on the
       // desktop) was saved before. If so then set the console-window to the
@@ -3270,6 +3271,118 @@ begin
   Except
     on e : EConsoleApiError do ShowMessage(e.Message);
   End;
+end;
+
+Procedure tConsole.ReadkeyScroll(Var Key:Word);
+Var
+  SaveCursorPos : TConsoleWindowPoint;
+  CurrentCursorPos : TConsoleWindowPoint;
+begin
+  SaveCursorPos    := Console.CursorPosition;
+  CurrentCursorPos := SaveCursorPos;
+  Repeat
+    ReadkeyW(Key,False);
+    if (Key=_Down) then
+    begin
+      CurrentCursorPos.y := CurrentCursorPos.y + 1;
+    end else
+    if (Key=_PgDown) or (Key=_CTRL_DOWN) then
+    begin
+      CurrentCursorPos.y := CurrentCursorPos.y + WindowSize.y;
+    end else
+    if (Key=_Up)   then
+    begin
+      CurrentCursorPos.y := CurrentCursorPos.y - 1;
+    end else
+    if (Key=_PgUp) or (Key=_CTRL_Up) then
+    begin
+      CurrentCursorPos.y := CurrentCursorPos.y - WindowSize.y;
+    end else
+    if (Key=_Right)   then
+    begin
+      CurrentCursorPos.x := CurrentCursorPos.x + 1;
+    end else
+    if (Key=_Left)   then
+    begin
+      CurrentCursorPos.x := CurrentCursorPos.x - 1;
+    end else
+    if (Key=_CTRL_Right)   then
+    begin
+      CurrentCursorPos.x := CurrentCursorPos.x + WindowSize.x;
+    end else
+    if (Key=_CTRL_Left)   then
+    begin
+      CurrentCursorPos.x := CurrentCursorPos.x - WindowSize.x;
+    end;
+    CurrentCursorPos.x := ValueMinMax(CurrentCursorPos.x,0,BufferSize.x-1);
+    CurrentCursorPos.y := ValueMinMax(CurrentCursorPos.y,0,BufferSize.y-1);
+    Console.CursorPosition := CurrentCursorPos;
+  Until (Key=_ESC) or
+        ((Key>=_0)        and (Key<=_9))        or
+        ((Key>=_ALT_0)    and (Key<=_ALT_9))    or
+        ((Key>=_F1)       and (Key<=_F12))      or
+        ((Key>=_ALT_F1)   and (Key<=_ALT_F12))  or
+        ((Key>=_ALT_A)    and (Key<=_ALT_Z))    or
+        ((Key>=_CTRL_F1)  and (Key<=_CTRL_F12)) or
+        ((Key>=_CTRL_A)   and (Key<=_CTRL_Z));
+  Console.CursorPosition := SaveCursorPos;
+end;
+
+Procedure tConsole.BufferScroll(x,y:integer);
+Var ScreenWindow  : TConsoleWindowRect;
+    ConsoleInfoEx : tConsoleInfoEx;
+begin
+  if (GetScreenBufferInfo) then
+  begin
+    Try
+      ScreenWindow := FScreenBufferInfo.srWindow;
+      ScreenWindow.Top    := ValueMinMax(y,0,BufferSize.y-WindowSize.y);
+      ScreenWindow.Left   := ValueMinMax(x,0,BufferSize.x-WindowSize.x);
+      ScreenWindow.Width  := WindowRect.Width;
+      ScreenWindow.Height := WindowRect.Height;
+      // Kernel32.dll: SetConsoleWindowInfo
+      if (SetConsoleWindowInfo(ConHandleStdOut,true,ScreenWindow)) then
+      begin
+        FScreenBufferInfo.srWindow := ScreenWindow;
+        ConsoleInfoEx := tConsoleInfoEx.Create;
+        if ConsoleInfoEx.GetInfoEx then
+        begin
+          {$IFDEF DELPHI10UP}
+          if (WindowRect<>ConsoleInfoEx.WindowRect) then
+          {$ELSE}
+          if (TSmallRectEqual(WindowRect,ConsoleInfoEx.WindowRect)) then
+          {$ENDIF DELPHI10UP}
+          begin
+            FScreenBufferInfo.srWindow := ConsoleInfoEx.WindowRect;
+          end;
+        end;
+        ConsoleInfoEx.Free;
+      end else
+      begin
+        raise EConsoleApiError.Create('SetConsoleWindowInfo;'+SysErrorMessage(GetLastError));
+      end;
+    except
+      raise EConsoleApiError.Create('SetConsoleWindowInfo;'+SysErrorMessage(GetLastError));
+    End;
+  end;
+end;
+
+Procedure tConsole.BufferScroll(BufferPos:TSmallPoint);
+begin
+  BufferScroll(BufferPos.x,BufferPos.y);
+end;
+
+Procedure tConsole.Buffer(Const SizeX,SizeY:Smallint; ClrBuffer:Boolean=True);
+Var BufSize : TConsoleWindowPoint;
+begin
+  BufSize.x  := ValueMinMax(SizeX,WindowSize.X,1000);
+  BufSize.y  := ValueMinMax(SizeY,WindowSize.Y,10000);
+  BufferSize := BufSize;
+  if ClrBuffer then
+  begin
+    WindowClrscr;
+    SetCursorPosition(0,0);
+  end;
 end;
 
 Procedure tConsole.Window(Const SizeX,SizeY:Smallint; FitScreen:Boolean=True; ClearScreen:Boolean=True);
@@ -3326,7 +3439,7 @@ begin
     if (CursorPosition.X>WindowSizeNew.X) or
        (CursorPosition.Y>WindowSizeNew.Y) then
     begin
-      Console.SetCursorPosition(1,1);
+      Console.SetCursorPosition(0,0);
     end;
     // Create ZeroBasedRect from Size
     WindowRectNew.Create(WindowSizeNew);
@@ -3642,15 +3755,17 @@ end;
 
 Function  tConsole.GetCursorPosition : TConsoleWindowPoint;
 begin
-  Result := FScreenBufferInfo.dwCursorPosition;
+  if GetScreenBufferInfo
+     then Result := FScreenBufferInfo.dwCursorPosition
+     else Result.Create(0,0);
 end;
 
 Procedure tConsole.SetCursorPosition(Const CursorPositionNew:TConsoleWindowPoint);
 begin
   // Caution: Ply.Console.ConsolPos is 1-Based
   //          FScreenBufferInfo.dwCursorPosition is Zero-Based
-  FScreenBufferInfo.dwCursorPosition.X := CursorPositionNew.X-1;
-  FScreenBufferInfo.dwCursorPosition.Y := CursorPositionNew.Y-1;
+  FScreenBufferInfo.dwCursorPosition.X := ValueMinMax(CursorPositionNew.X,0,BufferSize.x);
+  FScreenBufferInfo.dwCursorPosition.Y := ValueMinMax(CursorPositionNew.Y,0,BufferSize.y);
   try
     // Kernel32.dll: SetConsoleCursorPosition
     SetConsoleCursorPosition(ConHandleStdOut,FScreenBufferInfo.dwCursorPosition);
@@ -3754,8 +3869,8 @@ begin
   // caclulate minimal Window-Size in Char (coloums & lines)
   if (DeskFontSize.X>0) and (DeskFontSize.Y>0) then
   begin
-    WinMinSize.x  := ((DeskSizeMin.X - DeskFrameSize.X) div DeskFontSize.X) + 1;
-    WinMinSize.y  := ((DeskSizeMin.Y - DeskFrameSize.Y) div DeskFontSize.Y) + 1;
+    WinMinSize.x := ((DeskSizeMin.X - DeskFrameSize.X) div DeskFontSize.X) + 1;
+    WinMinSize.y := ((DeskSizeMin.Y - DeskFrameSize.Y) div DeskFontSize.Y) + 1;
   end;
   // Set Size at least to (20,2)
   WinMinSize.Normalize(20,2);
@@ -3800,10 +3915,8 @@ Function  tConsoleInfoEx.GetInfoEx : Boolean;
 begin
   Result := False;
   Try
-    if (GetConBufferInfoEx(FScreenBufferInfoEx)) then
-    begin
-      Result := True;
-    end;
+    GetConBufferInfoEx(FScreenBufferInfoEx);
+    Result := True;
   Except
     On E : EConsoleApiError do ShowMessage(e.Message);
   End;
@@ -3817,13 +3930,11 @@ begin
     // Otherwise the size of the window will be changed
     inc(FScreenBufferInfoEx.srWindow.Bottom);
     inc(FScreenBufferInfoEx.srWindow.Right);
-    if (SetConBufferInfoEx(FScreenBufferInfoEx)) then
-    begin
-      Result := True;
-      // decrease to get the original Value
-      dec(FScreenBufferInfoEx.srWindow.Bottom);
-      dec(FScreenBufferInfoEx.srWindow.Right);
-    end;
+    SetConBufferInfoEx(FScreenBufferInfoEx);
+    // decrease to get the original Value
+    dec(FScreenBufferInfoEx.srWindow.Bottom);
+    dec(FScreenBufferInfoEx.srWindow.Right);
+    Result := True;
   Except
     On E : EConsoleApiError do ShowMessage(e.Message);
   End;

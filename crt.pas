@@ -2,7 +2,7 @@
 
   Name          : crt.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 05.07.2023
+  Last modified : 25.07.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -95,7 +95,7 @@ function  KeyPressed: Boolean;
 function  ReadKeyA : AnsiChar; Overload;
 function  ReadkeyA(Var Key:Word) : AnsiChar; Overload;
 function  ReadkeyW : WideChar; Overload;
-function  ReadkeyW(Var Key:Word) : WideChar; Overload;
+function  ReadkeyW(Var Key:Word; SetCursorPos:Boolean=True) : WideChar; Overload;
 function  Readkey : WideChar; Overload;
 function  Readkey(Var Key:Word) : WideChar; Overload;
 Procedure ReadkeyTimeOut(Var Key:Word; TimeOutSeconds:Integer=10; TimeOutKey:Word=_ESC);
@@ -178,7 +178,8 @@ Type TConsoleString = Record
        class operator GreaterThan(a, b:TConsoleString) : Boolean;
        class operator LessThan(a, b:TConsoleString) : Boolean;
        class operator Add(a, b:TConsoleString) : TConsoleString;
-       Constructor Create(uString:UnicodeString; TColor:Byte=LightGray; BColor:Byte=Black);
+       Constructor Create(uString:UnicodeString; TColor:Byte=LightGray; BColor:Byte=Black); Overload;
+       Constructor Create(eStrChar:TDynStr; eStrAttr:TDynWord); Overload;
        property  ConsoleChar[index:integer] : TConsoleChar Read GetConsoleChar Write SetConsoleChar; default;
        property  Char[index:integer] : WideChar Read GetWideChar Write SetWideChar;
        property  Attr[index:integer] : Word Read GetAttribute Write SetAttribute;
@@ -299,9 +300,15 @@ procedure WriteChar(x,y: integer; Const ch:WideChar); Overload;
 procedure WriteChar(x,y: integer; Const ch:Word); Overload;
 
           // WriteConsole: Ignores the boundaries of the current crt.window
-procedure WriteConsole(x,y: integer; Const uString:UnicodeString);
+procedure WriteConsole(Const uString:UnicodeString); Overload;
+procedure WritelnConsole(Const uString:UnicodeString); Overload;
+procedure WriteConsole(x,y: integer; Const uString:UnicodeString); Overload;
 
           // WriteString: Observes the boundaries of the current crt.window
+procedure WriteString(x,y: integer; Const sString:ShortString;
+            SourceCodepage:TCodepage=_Codepage_850); Overload;
+procedure WriteString(Const sString:ShortString;
+            SourceCodepage:TCodepage=_Codepage_850); Overload;
 procedure WriteString(x,y: integer; Const aString:AnsiString); Overload;
 procedure WriteString(Const aString:AnsiString); Overload;
 procedure WriteString(x,y: integer; Const uString:UnicodeString); Overload;
@@ -801,6 +808,17 @@ Constructor TConsoleString.Create(uString:UnicodeString; TColor:Byte=LightGray; 
 begin
   InitChar(uString);
   InitAttr(Length(uString),TTextAttr.Create(TColor,BColor));
+end;
+
+Constructor TConsoleString.Create(eStrChar:TDynStr; eStrAttr:TDynWord);
+begin
+  while Length(eStrAttr) < Length(eStrChar) do
+  begin
+    TAppender<Word>.Append(eStrAttr,_TextAttr_Default);
+  end;
+  SetLength(eStrAttr,Length(eStrChar));
+  FStrChar := eStrChar;
+  FStrAttr := eStrAttr;
 end;
 
 Procedure TConsoleString.Init(NewLen:integer; aChar:WideChar=' ';
@@ -2243,16 +2261,47 @@ begin
   WriteChar(x,y,WideChar(ch));
 end;
 
-procedure WriteConsole(x,y: integer; Const uString:UnicodeString);
+procedure WriteConsole(Const uString:UnicodeString);
 var numWritten               : Longword;
     numWrite                 : Longword;
 begin
-  GotoXY(x,y);
-  Console.CursorPosition := CursorPos;
   // Winapi.Windows.WriteConsole uses Console.TextAttr so force TextAttr here
-  Console.TextAttr       := TextAttr;
+  Console.TextAttr := TextAttr;
   numWrite := Length(uString);
   Winapi.Windows.WriteConsole(ConHandleStdOut, @uString[1], NumWrite, NumWritten, nil);
+end;
+
+procedure WritelnConsole(Const uString:UnicodeString); Overload;
+begin
+  WriteConsole(uString+sLineBreak);
+end;
+
+procedure WriteConsole(x,y: integer; Const uString:UnicodeString);
+var numWritten               : Longword;
+    numWrite                 : Longword;
+    ConCursorPos             : TConsoleWindowPoint;
+begin
+  ConCursorPos.x := x;
+  ConCursorPos.y := y;
+  Console.CursorPosition := ConCursorPos;
+  // Winapi.Windows.WriteConsole uses Console.TextAttr so force TextAttr here
+  Console.TextAttr := TextAttr;
+  numWrite := Length(uString);
+  Winapi.Windows.WriteConsole(ConHandleStdOut, @uString[1], NumWrite, NumWritten, nil);
+end;
+
+procedure WriteString(x,y: integer; Const sString:ShortString;
+            SourceCodepage:TCodepage=_Codepage_850);
+begin
+  if (SourceCodepage=_Codepage_1252)
+     then WriteString(x,y,Str_CP1252_Unicode(sString))
+     else WriteString(x,y,Str_CP850_Unicode(sString));
+end;
+
+procedure WriteString(Const sString:ShortString;
+            SourceCodepage:TCodepage=_Codepage_850);
+begin
+  WriteString(WhereX,WhereY,sString);
 end;
 
 procedure WriteString(x,y: integer; Const aString:AnsiString);
@@ -2855,6 +2904,10 @@ begin
               _VKC_INSERT                    : RKW := _SHIFT_INSERT;
               _VKC_DELETE                    : RKW := _SHIFT_DELETE;
               _VKC_A        .. _VKC_Z        : RKW := $4C00 + buf.Event.KeyEvent.wVirtualKeyCode;
+                // OEM1=ü | OEM3=ö | OEM7=ä
+              _VKC_OEM1                      : RKW := $4C00 + buf.Event.KeyEvent.wVirtualKeyCode;
+              _VKC_OEM3                      : RKW := $4C00 + buf.Event.KeyEvent.wVirtualKeyCode;
+              _VKC_OEM7                      : RKW := $4C00 + buf.Event.KeyEvent.wVirtualKeyCode;
               _VKC_0_NumPad .. _VKC_9_NumPad : RKW := $4C00 + buf.Event.KeyEvent.wVirtualKeyCode;
               _VKC_DIVIDE_NumPad             : RKW := $4C00 + buf.Event.KeyEvent.wVirtualKeyCode;
               _VKC_F1 .. _VKC_F24            : RKW := $4C00 + buf.Event.KeyEvent.wVirtualKeyCode;
@@ -2892,6 +2945,11 @@ begin
               _VKC_PgUp .. _VKC_DOWN           : RKW := buf.Event.KeyEvent.wVirtualKeyCode;
               _VKC_0        .. _VKC_9          : RKW := buf.Event.KeyEvent.wVirtualKeyCode;
               _VKC_A        .. _VKC_Z          : RKW := buf.Event.KeyEvent.wVirtualKeyCode;
+                // OEM1=ü | OEM3=ö | OEM4=ß | OEM7=ä
+              _VKC_OEM1                        : RKW := buf.Event.KeyEvent.wVirtualKeyCode;
+              _VKC_OEM3                        : RKW := buf.Event.KeyEvent.wVirtualKeyCode;
+              _VKC_OEM4                        : RKW := buf.Event.KeyEvent.wVirtualKeyCode;
+              _VKC_OEM7                        : RKW := buf.Event.KeyEvent.wVirtualKeyCode;
               _VKC_0_NumPad .. _VKC_9_NumPad   : RKW := buf.Event.KeyEvent.wVirtualKeyCode;
               _VKC_MULTIPLY_NumPad             : RKW := _MULTIPLY_NumPad;
               _VKC_PLUS_NumPad                 : RKW := _PLUS_NumPad;
@@ -3081,11 +3139,18 @@ begin
         _Return_NumPad                               : Result := #0;
         _F1                  .. _F24                 : Result := #0;
         _ALTGR_0_NumPad      .. _ALTGR_9_NumPad      : Result := #0;
-        // Provide spezial characters for these keys
-                                 // make small letters
-        _A        .. _Z        : Result := WideChar(97 + (RKW-_A));
-                                 // make numbers (0..9)
+        // make numbers (0..9)
         _0_NumPad .. _9_NumPad : Result := WideChar(48 + (RKW-_0_NumPad));
+        // Provide spezial characters for these keys
+        // make small letters
+        _A        .. _Z  : Result := WideChar(97 + (RKW-_A));
+        _AE              : Result := 'ä';
+        _OE              : Result := 'ö';
+        _UE              : Result := 'ü';
+        _SHIFT_AE        : Result := 'Ä';
+        _SHIFT_OE        : Result := 'Ö';
+        _SHIFT_UE        : Result := 'Ü';
+        _SS              : Result := 'ß';
         _MULTIPLY_NumPad : Result := '*';
         _PLUS_NumPad     : Result := '+';
         _MINUS_NumPad    : Result := '-';
@@ -3162,10 +3227,13 @@ begin
   Result := ReadkeyW(Key);
 end;
 
-Function  ReadkeyW(Var Key:Word) : WideChar;
+Function  ReadkeyW(Var Key:Word; SetCursorPos:Boolean=True) : WideChar;
 begin
   // Set position of the cursor
-  Console.CursorPosition := CursorPos;
+  if (SetCursorPos) then
+  begin
+    Console.SetCursorPosition(CursorPos.x-1,CursorPos.y-1);
+  end;
   Repeat
     RKW     := _ReadKeyWord;
     Result  := _RKW_to_WideChar(RKW);
