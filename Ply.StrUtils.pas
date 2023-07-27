@@ -55,7 +55,10 @@ Function  IntToString(Value:Int64; Width:Integer=0;
 Function  IntToStringLZ(Value:Int64; MinDigits:Integer=3) : UnicodeString;
 
 Function  IntToCounterFilename(Value:Int64; MinDigits:Integer=0) : UnicodeString;
+
 Function  StringToInteger(NumberString:String; Default:Integer=0) : Integer;
+Function  StringToInt64(NumberString:String; Default:Integer=0) : Int64;
+
 function  DoubleToString(Number:Double; Width:Integer=0; Comma:Byte=2;
             DecimalSeparator:WideChar='.'; ThousandSeparator:WideChar='?') : String;
 Function  StringToDouble(NumberString:UnicodeString; ThousandSeparator:WideChar='?') : Double;
@@ -499,6 +502,15 @@ begin
 end;
 
 Function  StringToInteger(NumberString:String; Default:Integer=0) : Integer;
+Var Code : Integer;
+begin
+  NumberString := NumberString.Trim;
+  Val(NumberString,Result,Code);
+  // Code indicates the position in "NumberString" at which the conversion failed
+  if (Code>0) then Result := Default;
+end;
+
+Function  StringToInt64(NumberString:String; Default:Integer=0) : Int64;
 Var Code : Integer;
 begin
   NumberString := NumberString.Trim;

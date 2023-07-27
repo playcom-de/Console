@@ -56,7 +56,7 @@ begin
   WriteXY( 1, 5,'(4) AutoOpacity on focus      : '+BoolToStringYesNo(Console.Modes.AutoOpacityOnFocus));
   {$ENDIF CONSOLEOPACITY}
   WriteXY(40, 1,TextAttrHead,'Crt extended features');
-  WriteXY(40, 2,'(5) UseAlternateWriteProc     : '+BoolToStringYesNo(Console.Modes.UseAlternateWriteProc));
+  WriteXY(40, 2,'(5) AlternateWriteProc        : '+Console.Modes.AlternateWriteProcText);
   WriteXY(40, 3,'(6) EnableAsciiCodeInput      : '+BoolToStringYesNo(Console.Modes.EnableAsciiCodeInput));
   WriteXY(40, 4,'(7) WrapWord                  : '+BoolToStringYesNo(Console.Modes.WrapWord));
   WriteXY(40, 5,'(8) ReplaceControlChracter    : '+BoolToStringYesNo(Console.Modes.ReplaceCtrlChar));
@@ -143,7 +143,14 @@ begin
       end else
       if (Key=_4) then Console.Modes.AutoOpacityOnFocus        := not(Console.Modes.AutoOpacityOnFocus)       else
       {$ENDIF CONSOLEOPACITY}
-      if (Key=_5) then Console.Modes.UseAlternateWriteProc     := not(Console.Modes.UseAlternateWriteProc)    else
+      if (Key=_5) then
+      begin
+        if (Console.Modes.AlternateWriteProc=awOff)
+           then Console.Modes.AlternateWriteProc := awCrt else
+        if (Console.Modes.AlternateWriteProc=awCrt)
+           then Console.Modes.AlternateWriteProc := awConsole
+           else Console.Modes.AlternateWriteProc := awOff;
+      end else
       if (Key=_6) then Console.Modes.EnableAsciiCodeInput      := not(Console.Modes.EnableAsciiCodeInput)     else
       if (Key=_7) then Console.Modes.WrapWord                  := not(Console.Modes.WrapWord)                 else
       if (Key=_8) then Console.Modes.ReplaceCtrlChar           := not(Console.Modes.ReplaceCtrlChar)          else

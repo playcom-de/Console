@@ -300,6 +300,7 @@ procedure WriteChar(x,y: integer; Const ch:WideChar); Overload;
 procedure WriteChar(x,y: integer; Const ch:Word); Overload;
 
           // WriteConsole: Ignores the boundaries of the current crt.window
+Procedure GotoXYConsole(X,Y: Integer);
 procedure WriteConsole(Const uString:UnicodeString); Overload;
 procedure WritelnConsole(Const uString:UnicodeString); Overload;
 procedure WriteConsole(x,y: integer; Const uString:UnicodeString); Overload;
@@ -353,6 +354,7 @@ Var RKW                      : Word = 0;
 
 Function  CrtWriteAlternate(var t: TTextRec; s: UnicodeString) : Pointer;
 Procedure CrtReadln(Var uString:UnicodeString);
+Function  CrtWriteAlternateConsole(var t: TTextRec; s: UnicodeString) : Pointer;
 
 Const
   // (Ctrl+Alt+0..9) MoveConsoleWindow to UserPosition
@@ -2070,24 +2072,29 @@ begin
   t.BufEnd := 0;
   case t.Mode of
     // Reset
-    fmInput: begin
-               t.InOutFunc := @CrtRead;
-               t.FlushFunc := @CrtNoProc;
-               t.CodePage  := Console.InputCodepage;
-             end;
+    fmInput:
+      begin
+        t.InOutFunc := @CrtRead;
+        t.FlushFunc := @CrtNoProc;
+        t.CodePage  := Console.InputCodepage;
+      end;
     // Rewrite
-    fmOutput: begin
-                t.InOutFunc := @CrtWrite;
-                t.FlushFunc := @CrtWrite;
-                t.CodePage  := Console.OutputCodepage;
-                if (Console.Modes.UseAlternateWriteProc)
-                   then AlternateWriteUnicodeStringProc := @CrtWriteAlternate;
-              end;
+    fmOutput:
+      begin
+        t.InOutFunc := @CrtWrite;
+        t.FlushFunc := @CrtWrite;
+        t.CodePage  := Console.OutputCodepage;
+        if (Console.Modes.AlternateWriteProc=awCrt)
+           then AlternateWriteUnicodeStringProc := @CrtWriteAlternate else
+        if (Console.Modes.AlternateWriteProc=awConsole)
+           then AlternateWriteUnicodeStringProc := @CrtWriteAlternateConsole;
+      end;
     // Append
-    fmInOut: begin
-               t.InOutFunc := @CrtWrite;
-               t.FlushFunc := @CrtWrite;
-             end;
+    fmInOut:
+      begin
+        t.InOutFunc := @CrtWrite;
+        t.FlushFunc := @CrtWrite;
+      end;
   else
     Exit;
   end;
@@ -2261,6 +2268,15 @@ begin
   WriteChar(x,y,WideChar(ch));
 end;
 
+Procedure GotoXYConsole(X,Y: Integer);
+Var ConCursorPos             : TConsoleWindowPoint;
+begin
+  // ConCursorPos is Zerobased
+  ConCursorPos.x := x-1;
+  ConCursorPos.y := y-1;
+  Console.CursorPosition := ConCursorPos;
+end;
+
 procedure WriteConsole(Const uString:UnicodeString);
 var numWritten               : Longword;
     numWrite                 : Longword;
@@ -2277,17 +2293,15 @@ begin
 end;
 
 procedure WriteConsole(x,y: integer; Const uString:UnicodeString);
-var numWritten               : Longword;
-    numWrite                 : Longword;
-    ConCursorPos             : TConsoleWindowPoint;
 begin
-  ConCursorPos.x := x;
-  ConCursorPos.y := y;
-  Console.CursorPosition := ConCursorPos;
-  // Winapi.Windows.WriteConsole uses Console.TextAttr so force TextAttr here
-  Console.TextAttr := TextAttr;
-  numWrite := Length(uString);
-  Winapi.Windows.WriteConsole(ConHandleStdOut, @uString[1], NumWrite, NumWritten, nil);
+  GotoXYConsole(x,y);
+  WriteConsole(uString);
+end;
+
+Function CrtWriteAlternateConsole(var t: TTextRec; s: UnicodeString) : Pointer;
+begin
+  WriteConsole(s);
+  Result := @t;
 end;
 
 procedure WriteString(x,y: integer; Const sString:ShortString;
@@ -2330,10 +2344,10 @@ begin
     begin
       CursorPos.X := WindSize.Left;
       Inc(CursorPos.Y);
-      (* Wenn noch nicht alle Zeichen aus aString geschrieben wurden und das  *)
-      (* letzte Zeichen im aktuellen Fenster erreicht wurde, dann innerhalb   *)
-      (* des aktuellen Fensters nach oben scrollen um die letzte Zeile mit    *)
-      (* den weiteren Zeichen aus aString füllen zu können                    *)
+      // If not all characters from aString have been written yet and the
+      // last character in the current window has been reached, then scroll
+      // up within the current window to be able to fill the last line with
+      // the further characters from aString
       if (aStringPos<=aStringLen) then
       begin
         While CursorPos.Y>WindSize.Bottom do
@@ -2344,8 +2358,8 @@ begin
         posWrite.X := CursorPos.X-1;
         posWrite.Y := CursorPos.Y-1;
       end else
-      (* Wenn keine weiteren Zeichen kommen, dann Cursor auf das letzte       *)
-      (* Zeichen im aktuellen Fenster setzen                                  *)
+      // If there are no more characters, place the cursor on the last
+      // character in the current window.
       begin
         CursorPos.X := WindSize.Right;
         Dec(CursorPos.Y);

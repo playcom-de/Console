@@ -396,6 +396,8 @@ Type tConsoleDesktop = Class
 (*************************)
 (***** tConsoleModes *****)
 (*************************)
+Type tConsoleAlternateWriteProc = (awOff, awCrt, awConsole);
+
 Type tConsoleModes = Class
      private
        // FModeInput: ProcessedInput, LineInput, EchoInput, ...
@@ -499,9 +501,10 @@ Type tConsoleModes = Class
        // FBool32[2]: ReplaceControlCharacter
        Function  GetReplaceCtrlChar : Boolean;
        Procedure SetGetReplaceCtrlChar(Value:Boolean);
-       // FBool32[3]: UseAlternateWriteProc
-       Function  GetUseAlternateWriteProc : Boolean;
-       Procedure SetUseAlternateWriteProc(Value:Boolean);
+       // FBool32[3 & 5]: AlternateWriteProc
+       Function  GetAlternateWriteProc : tConsoleAlternateWriteProc;
+       Procedure SetAlternateWriteProc(Value:tConsoleAlternateWriteProc);
+       Function  GetAlternateWriteProcText : String;
        // Registry: ForceV2
        Function  GetForceV2 : Boolean;
        Procedure SetForceV2(Value:Boolean);
@@ -524,72 +527,108 @@ Type tConsoleModes = Class
        Function  GetTrimLeadingZeros: Boolean;
        Procedure SetTrimLeadingZeros(Value: Boolean);
      public
-       // StdIn $1|#1 ProcessedInput : ENABLE_PROCESSED_INPUT
-       Property  ProcessedInput : Boolean Read GetProcessedInput Write SetProcessedInput;
-       // StdIn $2|#2 LineInput : ENABLE_LINE_INPUT
+                 // StdIn $1|#1 ProcessedInput : ENABLE_PROCESSED_INPUT
+       Property  ProcessedInput : Boolean
+                 Read GetProcessedInput
+                 Write SetProcessedInput;
+                 // StdIn $2|#2 LineInput : ENABLE_LINE_INPUT
        Property  LineInput : Boolean Read GetLineInput Write SetLineInput;
-       // StdIn $4|#4 EchoInput : ENABLE_ECHO_INPUT
+                 // StdIn $4|#4 EchoInput : ENABLE_ECHO_INPUT
        Property  EchoInput : Boolean Read GetEchoInput Write SetEchoInput;
-       // StdIn $8|#8 WindowInput : ENABLE_WINDOW_INPUT
+                 // StdIn $8|#8 WindowInput : ENABLE_WINDOW_INPUT
        Property  WindowInput : Boolean Read GetWindowInput Write SetWindowInput;
-       // StdIn $10|#16 MouseInput : ENABLE_MOUSE_INPUT
+                 // StdIn $10|#16 MouseInput : ENABLE_MOUSE_INPUT
        Property  MouseInput : Boolean Read GetMouseInput Write SetMouseInput;
-       // StdIn $20|#32 InsertMode : ENABLE_INSERT_MODE
+                 // StdIn $20|#32 InsertMode : ENABLE_INSERT_MODE
        Property  InsertMode : Boolean Read GetInsertMode Write SetInsertMode;
-       // StdIn $40|#64 QuickEditMode : ENABLE_QUICK_EDIT_MODE
+                 // StdIn $40|#64 QuickEditMode : ENABLE_QUICK_EDIT_MODE
        Property  QuickEditMode : Boolean Read GetQuickEditMode Write SetQuickEditMode;
-       // StdIn $80|#128 ExtendedFlags : ENABLE_EXTENDED_FLAGS
+                 // StdIn $80|#128 ExtendedFlags : ENABLE_EXTENDED_FLAGS
        Property  ExtendedFlags : Boolean Read GetExtendedFlags Write SetExtendedFlags;
-       // StdIn $100/#256 AutoPosition : ENABLE_AUTO_POSITION
+                 // StdIn $100/#256 AutoPosition : ENABLE_AUTO_POSITION
        Property  AutoPosition : Boolean Read GetAutoPosition Write SetAutoPosition;
-       // StdIn $200/#512 VirtualTerminalInput : ENABLE_VIRTUAL_TERMINAL_INPUT
-       Property  VirtualTerminalInput : Boolean Read GetVirtualTerminalInput Write SetVirtualTerminalInput;
-       // StdOut $1|#1 ProcessedOutput : ENABLE_PROCESSED_OUTPUT
-       // Backspace, tab, bell, carriage return, and line feed characters are processed.
-       Property  ProcessedOutput : Boolean Read GetProcessedOutput Write SetProcessedOutput;
-       // StdOut $2|#2 WrapOutput : ENABLE_WRAP_AT_EOL_OUTPUT
-       // cursor moves to the beginning of the next row when reaches eol
-       // causes scroll up when the cursor reaches the last row in the window
+                 // StdIn $200/#512 VirtualTerminalInput : ENABLE_VIRTUAL_TERMINAL_INPUT
+       Property  VirtualTerminalInput : Boolean
+                 Read GetVirtualTerminalInput
+                 Write SetVirtualTerminalInput;
+                 // StdOut $1|#1 ProcessedOutput : ENABLE_PROCESSED_OUTPUT
+                 // Backspace, tab, bell, CR, LF characters are processed.
+       Property  ProcessedOutput : Boolean
+                 Read GetProcessedOutput
+                 Write SetProcessedOutput;
+                 // StdOut $2|#2 WrapOutput : ENABLE_WRAP_AT_EOL_OUTPUT
+                 // cursor moves to the beginning of the next row when reaches eol
+                 // causes scroll up when the cursor reaches the last row in the window
        Property  WrapOutput : Boolean Read GetWrapOutput Write SetWrapOutput;
-       // StdOut $4|#4 VirtualTerminal : ENABLE_VIRTUAL_TERMINAL_PROCESSING
-       // Control character sequences are parsed for VT100.
+                 // StdOut $4|#4 VirtualTerminal : ENABLE_VIRTUAL_TERMINAL_PROCESSING
+                 // Control character sequences are parsed for VT100.
        Property  VirtualTerminal : Boolean Read GetVirtualTerminal Write SetVirtualTerminal;
-       // StdOut $8|#8 NewlineAutoReturn : DISABLE_NEWLINE_AUTO_RETURN
-       // Adds an additional state to end-of-line wrapping that can
-       // delay the cursor move and buffer scroll operations. Scroll
-       // operation and cursor move is delayed until the next character arrives.
-       Property  DisableNewlineAutoReturn : Boolean Read GetDisableNewlineAutoReturn Write SetDisableNewlineAutoReturn;
-       // StdOut $10|#16 LvbGridWorldwide : ENABLE_LVB_GRID_WORLDWIDE
-       // Allow the usage of character attributes (underline, outline, invert)
-       Property  LvbGridWorldwide : Boolean Read GetLvbGridWorldwide Write SetLvbGridWorldwide;
+                 // StdOut $8|#8 NewlineAutoReturn : DISABLE_NEWLINE_AUTO_RETURN
+                 // Adds an additional state to end-of-line wrapping that can
+                 // delay the cursor move and buffer scroll operations. Scroll
+                 // operation and cursor move is delayed until the next character arrives.
+       Property  DisableNewlineAutoReturn : Boolean
+                 Read GetDisableNewlineAutoReturn
+                 Write SetDisableNewlineAutoReturn;
+                 // StdOut $10|#16 LvbGridWorldwide : ENABLE_LVB_GRID_WORLDWIDE
+                 // Allow the usage of character attributes (underline, outline, invert)
+       Property  LvbGridWorldwide : Boolean
+                 Read GetLvbGridWorldwide
+                 Write SetLvbGridWorldwide;
        Property  Input : DWord Read FInput;
        Property  Output : DWord Read FOutput;
        {$IFDEF CONSOLEOPACITY}
        Property  Opacity : Byte Read GetOpacity Write SetOpacity;
-       Property  AutoOpacityOnFocus : Boolean Read GetAutoOpacityOnFocus Write SetAutoOpacityOnFocus;
+                 // FBool32[4]: AutoOpacityOnFocus
+       Property  AutoOpacityOnFocus : Boolean
+                 Read GetAutoOpacityOnFocus
+                 Write SetAutoOpacityOnFocus;
        {$ENDIF CONSOLEOPACITY}
-       // EnableAsciiCodeInput: Enable (Ctrl+^) for Ascii-Input-Char
-       Property  EnableAsciiCodeInput : Boolean Read GetAsciiCodeInput Write SetAsciiCodeInput;
-       // WrapWord: In case of LineWrap, try to find a space to Wrap the line
+                 // EnableAsciiCodeInput: Enable (Ctrl+^) for Ascii-Input-Char
+       Property  EnableAsciiCodeInput : Boolean
+                 Read GetAsciiCodeInput
+                 Write SetAsciiCodeInput;
+                 // WrapWord: In case of LineWrap, try to find a space to Wrap the line
        Property  WrapWord : Boolean Read GetWrapWord Write SetWrapWord;
-       // ReplaceControlCharacter: Replace ControlCharacter with visible Char if ProcessedOutput=False
-       Property  ReplaceCtrlChar : Boolean Read GetReplaceCtrlChar Write SetGetReplaceCtrlChar;
-       // UseAlternateWriteProc: Redirect System.Write and System.Writeln -> Default=True
-       Property  UseAlternateWriteProc : Boolean Read GetUseAlternateWriteProc Write SetUseAlternateWriteProc;
-       // ForceV2: True: enables all new console features
+                 // ReplaceControlCharacter: Replace ControlCharacter
+                 // with visible Char if ProcessedOutput=False
+       Property  ReplaceCtrlChar : Boolean
+                 Read GetReplaceCtrlChar
+                 Write SetGetReplaceCtrlChar;
+                 // AlternateWriteProc: awOff = Use System.Write
+                 // awCRT = Use Crt.Write, awConsole = Use Crt.WriteConsole
+       Property  AlternateWriteProc : tConsoleAlternateWriteProc
+                 Read GetAlternateWriteProc
+                 Write SetAlternateWriteProc;
+       Property  AlternateWriteProcText : String
+                 Read GetAlternateWriteProcText;
+                 // ForceV2: True: enables all new console features
        Property  ForceV2 : Boolean Read GetForceV2 Write SetForceV2;
-       // LineSelection: enable=line selection / disable=block mode selection
-       Property  LineSelection : Boolean Read GetLineSelection Write SetLineSelection;
-       // FilterOnPaste: enables new paste behavior
-       Property  FilterOnPaste : Boolean Read GetFilterOnPaste Write SetFilterOnPaste;
-       // LineWrap: wraps text when you resize console windows
+                 // LineSelection: enable=line selection
+                 // disable=block mode selection
+       Property  LineSelection : Boolean
+                 Read GetLineSelection
+                 Write SetLineSelection;
+                 // FilterOnPaste: enables new paste behavior
+       Property  FilterOnPaste : Boolean
+                 Read GetFilterOnPaste
+                 Write SetFilterOnPaste;
+                 // LineWrap: wraps text when you resize console windows
        Property  LineWrap : Boolean Read GetLineWrap Write SetLineWrap;
-       // CtrlKeyShortcutsDisabled: enables new key shortcuts / True: disables them
-       Property  CtrlKeyShortcutsDisabled : Boolean Read GetCtrlKeyShortcutsDisabled Write SetCtrlKeyShortcutsDisabled;
-       // ExtendedEditKeys: enables the full set of keyboard selection keys
-       Property  ExtendedEditKey : Boolean Read GetExtendedEditKey Write SetExtendedEditKey;
-       // TrimLeadingZeros: trims leading zeroes in selections made by double-clicking
-       Property  TrimLeadingZeros : Boolean Read GetTrimLeadingZeros Write SetTrimLeadingZeros;
+                 // CtrlKeyShortcutsDisabled: enables new key shortcuts
+                 // True: disables them
+       Property  CtrlKeyShortcutsDisabled : Boolean
+                 Read GetCtrlKeyShortcutsDisabled
+                 Write SetCtrlKeyShortcutsDisabled;
+                 // ExtendedEditKeys: enables full set of keyboard selection keys
+       Property  ExtendedEditKey : Boolean
+                 Read GetExtendedEditKey
+                 Write SetExtendedEditKey;
+                 // TrimLeadingZeros: trims leading zeroes in selections
+                 // made by double-clicking
+       Property  TrimLeadingZeros : Boolean
+                 Read GetTrimLeadingZeros
+                 Write SetTrimLeadingZeros;
        Constructor Create;
        Destructor Destroy; Override;
        Procedure Clear;
@@ -2419,17 +2458,39 @@ begin
   FBool32[2] := Value;
 end;
 
-Function  tConsoleModes.GetUseAlternateWriteProc : Boolean;
+Function  tConsoleModes.GetAlternateWriteProc : tConsoleAlternateWriteProc;
 begin
-  Result := FBool32[3];
+  if FBool32[3] then Result := awCrt else
+  if FBool32[5] then Result := awConsole
+                else Result := awOff;
 end;
 
-Procedure tConsoleModes.SetUseAlternateWriteProc(Value:Boolean);
+Procedure tConsoleModes.SetAlternateWriteProc(Value:tConsoleAlternateWriteProc);
 begin
-  FBool32[3] := Value;
-  if (Value)
-     then AlternateWriteUnicodeStringProc := @CrtWriteAlternate
-     else AlternateWriteUnicodeStringProc := Nil;
+  if (Value=awCrt) then
+  begin
+    FBool32[3] := True;
+    FBool32[5] := False;
+    AlternateWriteUnicodeStringProc := @CrtWriteAlternate;
+  end else
+  if (Value=awConsole) then
+  begin
+    FBool32[3] := False;
+    FBool32[5] := True;
+    AlternateWriteUnicodeStringProc := @CrtWriteAlternateConsole;
+  end else
+  begin
+    FBool32[3] := False;
+    FBool32[5] := False;
+    AlternateWriteUnicodeStringProc := Nil;
+  end;
+end;
+
+Function  tConsoleModes.GetAlternateWriteProcText : String;
+begin
+  if AlternateWriteProc=awCrt     then Result := 'Crt' else
+  if AlternateWriteProc=awConsole then Result := 'Console'
+                                  else Result := 'Off';
 end;
 
 {$IFDEF CONSOLEOPACITY}
@@ -3454,7 +3515,7 @@ begin
           {$IFDEF DELPHI10UP}
           if (WindowRect<>ConsoleInfoEx.WindowRect) then
           {$ELSE}
-          if (TSmallRectEqual(WindowRect,ConsoleInfoEx.WindowRect)) then
+          if (not TSmallRectEqual(WindowRect,ConsoleInfoEx.WindowRect)) then
           {$ENDIF DELPHI10UP}
           begin
             FScreenBufferInfo.srWindow := ConsoleInfoEx.WindowRect;
@@ -3463,10 +3524,14 @@ begin
         ConsoleInfoEx.Free;
       end else
       begin
-        raise EConsoleApiError.Create('SetConsoleWindowInfo;'+SysErrorMessage(GetLastError));
+        raise EConsoleApiError.Create('SetConsoleWindowInfo='
+                +WindowRectNew.ToStringRect+': '
+                +SysErrorMessage(GetLastError));
       end;
     except
-      raise EConsoleApiError.Create('SetConsoleWindowInfo;'+SysErrorMessage(GetLastError));
+      raise EConsoleApiError.Create('SetConsoleWindowInfo='
+              +WindowRectNew.ToStringRect+': '
+              +SysErrorMessage(GetLastError));
     End;
   end;
 end;
