@@ -2,7 +2,7 @@
 
   Name          : Ply.Mathe.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 01.05.2023
+  Last modified : 30.07.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -24,6 +24,8 @@ Function  ValueMinMax(Value, MinValue, MaxValue: Double) : Double; Overload;
 Function  ValueMinMax(Value, MinValue, MaxValue: Extended) : Extended; Overload;
 
 Function  IsPrime(n:Int64) : Boolean;
+Function  PlyPower(Const Base,Exponent:Integer) : Integer; Overload;
+Function  PlyPower(Const Base,Exponent:Int64) : Int64; Overload;
 
 implementation
 
@@ -95,6 +97,20 @@ begin
     end;
     Result := True;
   end;
+end;
+
+Function  PlyPower(Const Base,Exponent:Integer) : Integer; Overload;
+begin
+  if (Exponent=1)
+     then Result := Base
+     else Result := Base * PlyPower(Base, Exponent-1);
+end;
+
+Function  PlyPower(Const Base,Exponent:Int64) : Int64; Overload;
+begin
+  if (Exponent=1)
+     then Result := Base
+     else Result := Base * PlyPower(Base, Exponent-1);
 end;
 
 end.

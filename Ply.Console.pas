@@ -107,9 +107,11 @@ Type
     Procedure SetOutline(Value:Boolean);
     Function  GetUnderline : Boolean;
     Procedure SetUnderline(Value:Boolean);
+    Class Function CreateTC(TColor:Byte) : TTextAttr; Static;
   Public
     class operator Implicit(Value: Word): TTextAttr;
     class operator Implicit(Value: tTextAttr): Word;
+    class property TC[TColor:Byte] : TTextAttr read CreateTC;
     Constructor Create(TColor, BColor:Byte); Overload;
     Constructor Create(TColor, BColor:Byte; ExtTextAttr:Word); Overload;
     Property  Attr : Word Read FTextAttr Write FTextAttr;
@@ -1101,6 +1103,13 @@ begin
     // Set all Grids to False
     SetOutline(False);
   end;
+end;
+
+Class Function  TTextAttr.CreateTC(TColor:Byte) : TTextAttr;
+begin
+  if TColor in [1..15]
+     then Result.Create(TColor,0)
+     else Result := _TextAttr_Default;
 end;
 
 class operator TTextAttr.Implicit(Value: Word): TTextAttr;
@@ -2596,8 +2605,8 @@ begin
   FInput := 0;
   FOutput := 0;
   FBool32.Clear;
-  // FBool32[3]: UseAlternateWriteProc -> Default=True
-  FBool32[3] := True;
+  // Use CrtWriteString as AlternateWriteProc
+  AlternateWriteProc := awCrt;
   {$IFDEF CONSOLEOPACITY}
   FOpacityAlpha := 255;
   {$ENDIF CONSOLEOPACITY}

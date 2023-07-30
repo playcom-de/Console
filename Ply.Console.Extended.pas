@@ -1534,7 +1534,7 @@ begin
       if (InpInsertMode) then Console.CursorOnBigSize
                          else Console.CursorOnNormalSize;
     end else
-    if (Key=_CRT_Delete) then
+    if (Key=_DELETE_CRT) then
     begin
       if (FromPos+cx<=Length(iString)) then
       begin
@@ -1774,7 +1774,7 @@ begin
   Until (Key=_ESC)          or (Key=_Return)        or
         (Key=_Space)        or (Key=_TAB)           or
         (Key=_Insert)       or (Key=_ALT_Insert)    or
-        (Key=_CRT_Delete)       or (Key=_ALT_Delete)    or
+        (Key=_DELETE_CRT)       or (Key=_ALT_Delete)    or
         (Key=_BackSpace)    or
         (Key=_PgDown)       or (Key=_PgUp)          or
         (Key=_CTRL_Down)    or (Key=_CTRL_Up)       or
@@ -2638,7 +2638,7 @@ begin
           (Key=_ALT_Minus)  or  (Key=_ALT_Plus)  or
           (Key=_TAB)        or
           (Key=_Insert)     or  (Key=_ALT_Insert) or
-          (Key=_CRT_DELETE) or  (Key=_ALT_Delete);
+          (Key=_DELETE_CRT) or  (Key=_ALT_Delete);
     if (Key=_Return)     or  (Key=_TAB)       or
        ((Key>=_F1)       and (Key<=_F12))     or
        ((Key>=_ALT_1)    and (Key<=_ALT_4))   or
@@ -2648,7 +2648,7 @@ begin
        (Key=_CTRL_Up)    or (Key=_CTRL_Down)  or
        (Key=_CTRL_Minus) or (Key=_CTRL_Plus)  or
        (Key=_ALT_Minus)  or  (Key=_ALT_Plus)  or
-       (Key=_Space)      or (Key=_CRT_DELETE)     or
+       (Key=_Space)      or (Key=_DELETE_CRT)     or
        (Key=_Insert) then
     begin
       ItemSelect  := ItemFrom + YSelect - YMin;

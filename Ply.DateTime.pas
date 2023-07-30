@@ -2,7 +2,7 @@
 
   Name          : Ply.DateTime.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 05.05.2023
+  Last modified : 31.07.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -37,16 +37,18 @@ Type
     procedure ClrTime;
     Procedure InitNow;
     Procedure InitUTC;
-    Procedure InitSeconds(ASeconds: Int64);
+    Procedure InitSeconds(aSeconds: Int64);
     Procedure Add(aDateTime:tDateTime);
-    Procedure AddSeconds(ASeconds:Int64);
+    Procedure AddSeconds(aSeconds:Int64);
               // InitDate: 'dd.mm.yyyy' - changes only the date - time is untouched
-    Procedure InitDate(ADate:String); Overload;
-    Procedure InitDate(Day,Month,Year:Integer); Overload;
+    Procedure InitDate(aDate:String); Overload;
+    Procedure InitDate(aDay,aMonth,aYear:Integer); Overload;
               // InitTime: 'hh:mm:ss' - changes only the time - date is untouched
     Procedure InitTime(ATime:String);
     Procedure InitMillisecond1970(eMillisecond:Int64);
     Procedure AddDays(CountDays:Integer);
+    Procedure AddMonths(CountMonths:Longint);
+    Procedure AddYears(CountYears:Longint);
     Procedure AddMilliSeconds(eMilliSeconds:Int64);
     Function  Compare(aDateTime:TDateTime) : Integer;
 
@@ -67,7 +69,10 @@ Type
     Function YYYYMMDD : String;         // 'yyyymmdd'
     Function HHMMSS : String;           // 'HHMMSS'
     Function DateTimeFilename : String; // 'YYYYMMDD_HHMMSS'
-    Function DayOfYear : Integer;       // 'DDD' = 001..366
+    Function DayOfWeek : Word;          // 1..7   : Monday = 1
+    Function DayOfYear : Word;          // 1..366 : 01.01.YYYY = 1
+    Function CalendarWeek : Word;       // 1..53  : DIN 1355
+    Function WeekOfYear : Word;         // Same as CalendarWeek
   end;
 
   TSeconds       = Type Cardinal;
@@ -243,7 +248,7 @@ begin
   Self := Trunc(Self);
 end;
 
-Procedure TDateTimeHelper.InitSeconds(ASeconds:Int64);
+Procedure TDateTimeHelper.InitSeconds(aSeconds:Int64);
 begin
   Self := ASeconds / SecondsPerDay;
 end;
@@ -253,12 +258,12 @@ begin
   Self := Self + aDateTime;
 end;
 
-Procedure TDateTimeHelper.AddSeconds(ASeconds:Int64);
+Procedure TDateTimeHelper.AddSeconds(aSeconds:Int64);
 begin
   Self := Self + (ASeconds/SecondsPerDay);
 end;
 
-Procedure tDateTimeHelper.InitDate(ADate:String);
+Procedure tDateTimeHelper.InitDate(aDate:String);
 Var
   Year, Month, Day : Word;
 begin
@@ -266,22 +271,20 @@ begin
   begin
     AdjustDateFormat(aDate);
     DateToValues(aDate,Year,Month,Day);
-    Self := EncodeDate(Year,Month,Day)+ Frac(Self);
+    Self := EncodeDate(Year,Month,Day) + Frac(Self);
   end else Self := Frac(Self);
 end;
 
-Procedure tDateTimeHelper.InitDate(Day,Month,Year:Integer);
+Procedure tDateTimeHelper.InitDate(aDay,aMonth,aYear:Integer);
 begin
   // Changes only the date component, the time remains the same
-  Day   := ValueMinMax(Day  ,1,31);
-  Month := ValueMinMax(Month,1,12);
-  Year  := ValueMinMax(Year ,0,9999);
-  InitDate(IntToStringLZ(Day,2)   +'.'
-          +IntToStringLZ(Month,2) +'.'
-          +IntToString(Year));
+  aYear  := ValueMinMax(aYear ,1,9999);
+  aMonth := ValueMinMax(aMonth,1,12);
+  aDay   := ValueMinMax(aDay  ,1,System.DateUtils.DaysInAMonth(aYear, aMonth));
+  Self   := EncodeDate(aYear,aMonth,aDay) + Frac(Self);
 end;
 
-Procedure tDateTimeHelper.InitTime(ATime:String);
+Procedure tDateTimeHelper.InitTime(aTime:String);
 begin
   // Changes only the time component, the date remains the same
   if (ATime<>'') then self := Trunc(self) + (TimeToSeconds(ATime) / SecondsPerDay)
@@ -299,6 +302,43 @@ end;
 Procedure TDateTimeHelper.AddDays(CountDays:Integer);
 begin
   Self := Self + CountDays;
+end;
+
+Procedure TDateTimeHelper.AddMonths(CountMonths:Longint);
+Var iDay,iMonth,iYear           : Word;
+begin
+  iDay   := Day;
+  iMonth := Month;
+  iYear  := Year;
+  if (CountMonths<0) then
+  begin
+    CountMonths := - CountMonths;
+    iYear       := iYear - (CountMonths Div 12);
+    CountMonths := (CountMonths Mod 12);
+    if (iMonth<=CountMonths) then
+    begin
+      iYear       := iYear - 1;
+      CountMonths := CountMonths - 12;
+    end;
+    iMonth := iMonth - CountMonths;
+  end else
+  if (CountMonths>0) then
+  begin
+    iYear       := iYear + (CountMonths Div 12);
+    CountMonths := (CountMonths Mod 12);
+    if (iMonth+CountMonths>12) then
+    begin
+      iYear       := iYear + 1;
+      CountMonths := CountMonths - 12;
+    end;
+    iMonth := iMonth + CountMonths;
+  end;
+  InitDate(iDay,iMonth,iYear);
+end;
+
+Procedure TDateTimeHelper.AddYears(CountYears:Longint);
+begin
+  InitDate(Day,Month,Year+CountYears);
 end;
 
 Procedure TDateTimeHelper.AddMilliSeconds(eMilliSeconds:Int64);
@@ -336,17 +376,17 @@ end;
 
 Function TDateTimeHelper.Year : Word;
 begin
-  Result := YearOf(Self);
+  Result := System.DateUtils.YearOf(Self);
 end;
 
 Function TDateTimeHelper.Month : Word;
 begin
-  Result := MonthOf(Self);
+  Result := System.DateUtils.MonthOf(Self);
 end;
 
 Function TDateTimeHelper.Day : Word;
 begin
-  Result := DayOf(Self);
+  Result := System.DateUtils.DayOf(Self);
 end;
 
 Function TDateTimeHelper.Age : TDateTime;
@@ -409,12 +449,12 @@ end;
 
 Function TDateTimeHelper.YYYYMMDD : String;       // 'yyyymmdd'
 begin
-  Result := FormatDateTime('yyyymmdd', Self);
+  Result := System.SysUtils.FormatDateTime('yyyymmdd', Self);
 end;
 
 Function TDateTimeHelper.HHMMSS : String;
 begin
-  Result := FormatDateTime('hhnnss', Self);
+  Result := System.SysUtils.FormatDateTime('hhnnss', Self);
 end;
 
 Function TDateTimeHelper.DateTimeFilename : String;
@@ -422,11 +462,49 @@ begin
   Result := YYYYMMDD + '_' + HHMMSS;
 end;
 
-Function TDateTimeHelper.DayOfYear : Integer;       // 'DDD' = 1..366
-Var LDateTime : tDateTime;
+Function TDateTimeHelper.DayOfWeek: Word;    // 1..7 : Monday = 1
 begin
-  LDateTime.InitDate(31,12,Year-1);
-  DayOfYear := Trunc(LDateTime) - Trunc(Self);
+  Result := System.DateUtils.DayOfTheWeek(Self);
+end;
+
+Function TDateTimeHelper.DayOfYear : Word;   // 1..366
+Var hDateTime : tDateTime;
+begin
+  hDateTime.InitDate(31,12,Year-1);
+  Result := Trunc(Self) - Trunc(hDateTime);
+end;
+
+Function  TDateTimeHelper.CalendarWeek : Word;    // 1..53
+Const table1 : ARRAY [1..7] of ShortInt = ( 0,  1,  2,  3, -3, -2, -1);
+      table2 : ARRAY [1..7] of ShortInt = ( 2,  1,  0, -1, -2, -3, -4);
+Var doy1,doy2                : Integer;
+    hDateTime                : tDateTime;
+begin
+  // DIN 1355 :
+  // - Monday is the first day of the week
+  // - January 4 is always in the first calendar week
+  // - December 28 is always in the last calendar week
+  hDateTime.InitDate(1,1,Year);
+
+  doy1 := DayofYear + table1[hDateTime.DayOfWeek];
+  doy2 := DayofYear + table2[DayOfWeek];
+
+  if (doy1 <= 0) then
+  begin
+    hDateTime.InitDate(31,12,Year-1);
+    Result := hDateTime.CalendarWeek;
+  end else
+  begin
+    hDateTime.InitDate(31,12,Year);
+    if (doy2 >= hDateTime.DayofYear)
+       then Result := 1
+       else Result := ((doy1-1) DIV 7) + 1;
+  end;
+end;
+
+Function TDateTimeHelper.WeekOfYear : Word;
+begin
+  Result := System.DateUtils.WeekOfTheYear(Self);
 end;
 
 { TSecondsHelper }

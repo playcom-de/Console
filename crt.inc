@@ -2,7 +2,7 @@
 
   Name          : crt.inc
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 03.05.2023
+  Last modified : 31.07.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -113,10 +113,9 @@ Const
   _RIGHT                     = $0027; (* #39                                 *)
   _DOWN                      = $0028; (* #40                                 *)
   _INSERT                    = $002D; (* #45                                 *)
-  // There is a overlap with Winapi.Windows "_Delete" so you should use
-  // _CRT_DELETE instead to be save
-  _CRT_DELETE                = $002E; (* #46                                 *)
-  _DELETE                    = $002E; (* #46                                 *)
+  // There is a overlap with Winapi.Windows "_Delete" so you have use
+  // _DELETE_CRT instead of _DELETE to be save
+  _DELETE_CRT                = $002E; (* #46                                 *)
 
   _Break                     = $4500; (* #17664                              *)
 

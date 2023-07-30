@@ -2,7 +2,7 @@
 
   Name          : crt.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 25.07.2023
+  Last modified : 30.07.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -93,7 +93,7 @@ Var
 procedure CrtAssign(var t:Text);
 function  KeyPressed: Boolean;
 function  ReadKeyA : AnsiChar; Overload;
-function  ReadkeyA(Var Key:Word) : AnsiChar; Overload;
+Function  ReadkeyA(Var Key:Word; SetCursorPos:Boolean=True) : AnsiChar; Overload;
 function  ReadkeyW : WideChar; Overload;
 function  ReadkeyW(Var Key:Word; SetCursorPos:Boolean=True) : WideChar; Overload;
 function  Readkey : WideChar; Overload;
@@ -270,7 +270,8 @@ Type TConsoleString = Record
        Procedure ClrLine(y1,y2:Integer);
        Function  GetChar(x,y:integer) : tConsoleChar;
        Procedure SetChar(x,y:integer; Value:tConsoleChar);
-       Procedure WriteXY(x,y:Longint; uString:String); Overload;
+       Procedure WriteXY(x,y:Integer; cString:CP850String); Overload;
+       Procedure WriteXY(x,y:Integer; uString:String); Overload;
        Procedure WriteXY(x,y:Integer; TColor:Byte; uString:String); Overload;
        Procedure MovePartScreen(X1,Y1,X2,Y2,XM,YM:Integer);
      end;
@@ -1438,6 +1439,11 @@ begin
   FScreen.SetChar(WindSize.Left+x,WindSize.Top+y,Value);
 end;
 
+Procedure tScreenSave.WriteXY(x,y:Longint; cString:CP850String);
+begin
+  WriteXY(x,y,Str_CP850_Unicode(cString));
+end;
+
 Procedure tScreenSave.WriteXY(x,y:Longint; uString:String);
 begin
   uString := Copy(uString,1,MaxX-X+1);
@@ -1450,10 +1456,10 @@ end;
 Procedure tScreenSave.WriteXY(x,y:Integer; TColor:Byte; uString:String);
 Var SaveAttr : tTextAttr;
 begin
-  SaveAttr := FTextAttr;
-  Textcolor(TColor);
+  SaveAttr := TextAttr;
+  TextColor(TColor);
   WriteXY(x,y,uString);
-  FTextAttr := SaveAttr;
+  TextAttr := SaveAttr;
 end;
 
 Procedure tScreenSave.MovePartScreen(X1,Y1,X2,Y2,XM,YM:Integer);
@@ -1869,7 +1875,7 @@ Begin
     if (Key=_CTRL_Right)    then _CrtCursorCtrlRight(t) else
     if (Key=_End)           then _CrtEnd(t)             else    // End
     if (Key=_Insert)        then _CrtInsert(t)          else    // Insert
-    if (Key=_CRT_Delete)    then _CrtDelete(t)          else    // Del
+    if (Key=_DELETE_CRT)    then _CrtDelete(t)          else    // Del
     if (Key=_BackSpace)     then _CrtBackSpace(t)       else    // BackSpace
     if (Key=_CTRL_Z)        then                                // Ctrl+Z = EOF
     begin
@@ -2041,7 +2047,7 @@ begin
     if (Key=_CTRL_Right) then __CursorCtrlRight else    // ctrl+right
     if (Key=_End)        then __End             else    // End
     if (Key=_Insert)     then __Insert          else    // Insert
-    if (Key=_CRT_Delete) then __Delete          else    // Del
+    if (Key=_DELETE_CRT) then __Delete          else    // Del
     if (Key=_BackSpace)  then __BackSpace       else    // BackSpace
     if (Key=_ESC)        then __Escape          else    // Escape
     if (Key=_Return) or (Key=_Ctrl_RETURN) then         // (RETURN) or (Ctrl+RETURN)
@@ -2384,7 +2390,7 @@ end;
 
 procedure WriteString(Const uString:UnicodeString);
 begin
-  WriteString(WhereX,WhereY,uString);
+  CrtWriteString(uString);
 end;
 
 procedure WriteString(x,y: integer; Const cString:TConsoleString); Overload;
@@ -2941,7 +2947,7 @@ begin
                 _VKC_RETURN                    : RKW := _Return_NumPad;
                 _VKC_PgUp .. _VKC_DOWN         : RKW := buf.Event.KeyEvent.wVirtualKeyCode;
                 _VKC_INSERT                    : RKW := _INSERT;
-                _VKC_DELETE                    : RKW := _CRT_DELETE;
+                _VKC_DELETE                    : RKW := _DELETE_CRT;
                 _VKC_DIVIDE_NumPad             : RKW := _DIVIDE_NumPad;
               end;
             end;
@@ -3109,7 +3115,7 @@ begin
       case RKW of
         // Do not provide a character for these keys
         _BackSpace           .. _ESC                 : Result := #0;
-        _PgUp                .. _CRT_DELETE          : Result := #0;
+        _PgUp                .. _DELETE_CRT          : Result := #0;
         _Return_NumPad                               : Result := #0;
         _F1                  .. _F24                 : Result := #0;
         // Provide spezial characters for these keys
@@ -3149,7 +3155,7 @@ begin
       case RKW of
         // Do not provide a character for these keys
         _BackSpace           .. _ESC                 : Result := #0;
-        _PgUp                .. _CRT_DELETE          : Result := #0;
+        _PgUp                .. _DELETE_CRT          : Result := #0;
         _Return_NumPad                               : Result := #0;
         _F1                  .. _F24                 : Result := #0;
         _ALTGR_0_NumPad      .. _ALTGR_9_NumPad      : Result := #0;
@@ -3221,10 +3227,13 @@ begin
   Result := ReadkeyA(Key);
 end;
 
-Function  ReadkeyA(Var Key:Word) : AnsiChar;
+Function  ReadkeyA(Var Key:Word; SetCursorPos:Boolean=True) : AnsiChar;
 begin
   // Set position of the cursor
-  Console.CursorPosition := CursorPos;
+  if (SetCursorPos) then
+  begin
+    Console.SetCursorPosition(CursorPos.x-1,CursorPos.y-1);
+  end;
   Repeat
     RKW     := _ReadKeyWord;
     Result  := _RKW_to_AnsiChar(RKW);

@@ -192,7 +192,8 @@ Type tDirInfos = Class(tObject)
        Property  DirInfo[Index:Integer]:tDirInfo Read GetDirInfo; Default;
        Procedure Add(Var aDirInfo:tDirInfo); Overload;
        Procedure Add(Var sr:tSearchRec; FilePath:String=''); Overload;
-       Procedure Add(eName:String; eSize:tFileSize; eDateTime:TDateTime; eAttr:TPlyFileAttribute); Overload;
+       Procedure Add(eName:String; eSize:tFileSize; eDateTime:TDateTime;
+                   eAttr:TPlyFileAttribute); Overload;
                  // Delete: Delete Filename form DirInfos if present
        Function  Delete(DeleteFileName:String; All:Boolean=False) : Boolean; Overload;
                  // Delete: Delete all Filenames in Strings form DirInfos
@@ -1956,10 +1957,10 @@ begin
           end;
         end else
         // F8 = Delete File
-        if (Key=_F8) then Key := _CRT_Delete;
+        if (Key=_F8) then Key := _DELETE_CRT;
       Until (Refresh)     or
             (Key=_Return) or   // Select File or Directory
-            (Key=_CRT_Delete) or   // _Delete or F8: Delete File
+            (Key=_DELETE_CRT) or   // _Delete or F8: Delete File
             (Key=_Insert) or   // Create Directory
             (Key=_ESC)    or   // Exit, do not select
             (Key=_F3)     or   // Program-specific: e.g. Show File or Copy to FTP
@@ -1973,7 +1974,7 @@ begin
             (Key=_ALT_Z);      // Zip Files in ZipFile
     Until (Key=_ESC)    or
           (Key=_Return) or
-          (Key=_CRT_Delete) or
+          (Key=_DELETE_CRT) or
           (Key=_Insert) or
           (Key=_F3)     or
           (Key=_F4)     or
