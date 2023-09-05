@@ -2,7 +2,7 @@
 
   Name          : Ply.StrUtils.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 20.06.2023
+  Last modified : 05.09.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -50,20 +50,35 @@ Function  StringOfChar(ch:Word; Count:Integer) : UnicodeString; Overload;
 
           // Leading Spaces
 Function  IntToString(Value:Int64; Width:Integer=0;
-            ThousendSeperator:WideChar='?') : UnicodeString;
+            ThousendSeperator:WideChar='?') : String;
           // LZ = Leading Zeros
-Function  IntToStringLZ(Value:Int64; MinDigits:Integer=3) : UnicodeString;
+Function  IntToStringLZ(Value:Int64; MinDigits:Integer=0) : String;
+          // 0Z = Coded String [0..9,A..Z]
+Function  IntToString0Z(Value:Int64; MinDigits:Integer=0) : String;
 
-Function  IntToCounterFilename(Value:Int64; MinDigits:Integer=0) : UnicodeString;
+Function  StringToInteger(sString:ShortString; Default:Integer=0) : Integer; Overload;
+Function  StringToInteger(aString:RawByteString; Default:Integer=0) : Integer; Overload;
+Function  StringToInteger(uString:String; Default:Integer=0) : Integer; Overload;
 
-Function  StringToInteger(NumberString:String; Default:Integer=0) : Integer;
 Function  StringToInt64(NumberString:String; Default:Integer=0) : Int64;
 
-function  DoubleToString(Number:Double; Width:Integer=0; Comma:Byte=2;
+Function  CompToString(Value:Comp; Width:Integer=0) : String;
+Function  CompToStringLZ(Value:Comp; Width:Integer=0) : String;
+Function  StringToComp(uString:String; Default:Comp=0) : Comp;
+
+Function  DoubleToString(Number:Double; Width:Integer=0; Comma:Integer=2;
+            DecimalSeparator:WideChar='.'; ThousandSeparator:WideChar='?') : String;
+Function  DoubleToStringLZ(Number:Double; Width:Integer=0; Comma:Integer=2;
             DecimalSeparator:WideChar='.'; ThousandSeparator:WideChar='?') : String;
 Function  StringToDouble(NumberString:UnicodeString; ThousandSeparator:WideChar='?') : Double;
-Function  StringReplaceGermanUmlauts(aString:String) : String;
-Function  StringDeleteSpaces(aString:String) : String;
+
+Function  StringReplaceGermanUmlauts(sString:ShortString) : ShortString; Overload;
+Function  StringReplaceGermanUmlauts(aString:AnsiString) : AnsiString; Overload;
+Function  StringReplaceGermanUmlauts(uString:String) : String; Overload;
+
+Function  StringDeleteSpaces(sString:ShortString) : ShortString; Overload;
+Function  StringDeleteSpaces(aString:AnsiString) : AnsiString; Overload;
+Function  StringDeleteSpaces(uString:String) : String; Overload;
 
 Function  BoolToStringJaNein(ABool:Boolean) : String;
 Function  BoolToStringYesNo(ABool:Boolean) : String;
@@ -76,9 +91,10 @@ Function  ByteToBinaryString(Value:Byte) : String;
           // 0 = '0000000000000000', 65535 = '1111111111111111'
 Function  WordToBinaryString(Value:Word) : String;
 
-Function  GetCurrentUsername: String;
-Function  GetWindowsUsername : String;
-Function  GetWindowsComputername : String;
+Function  GetCurrentUserName: String;
+Function  GetWindowsUserName : String;
+Function  GetCurrentComputerName: String;
+Function  GetWindowsComputerName : String;
 
 Function  DataEqual(Var Data1,Data2; Size:Longword) : Boolean;
 
@@ -93,7 +109,6 @@ Function  Filepath_Temp : String;
           // %PUBLIC% - C:\Users\Public\
 Function  Filepath_Public : String;
 
-Function  Filename_Make_Valid(Filename_ex_path:String) : String;
 Function  FilenameCheckMask(Filename:String; Mask:String;
             CaseSensitiv:Boolean=False) : Boolean;
 Function  FilenameCheckFilter(Filename:String; Filter:String;
@@ -143,12 +158,12 @@ Function  StringPosWrapWord(uString:UnicodeString; MaxLen:Integer; Offset:Intege
 
 Function  PlyLowerCase(sString:ShortString) : ShortString; Overload;
 Function  PlyLowerCase(aString:AnsiString) : AnsiString; Overload;
-Function  PlyLowerCase(cString:CP850String) : CP850String; Overload;
+Function  PlyLowerCase(cString:RawByteString) : RawByteString; Overload;
 Function  PlyLowerCase(uString:UnicodeString) : UnicodeString; Overload;
 
 Function  PlyUpperCase(sString:ShortString) : ShortString; Overload;
 Function  PlyUpperCase(aString:AnsiString) : AnsiString; Overload;
-Function  PlyUpperCase(cString:CP850String) : CP850String; Overload;
+Function  PlyUpperCase(cString:RawByteString) : RawByteString; Overload;
 Function  PlyUpperCase(uString:UnicodeString) : UnicodeString; Overload;
 
 Function  Char_CP437_Unicode(ch:AnsiChar) : WideChar;
@@ -166,26 +181,33 @@ Function  Char_CP1252_CP850(ch:AnsiChar) : AnsiChar;
 Function  Char_CP1252_Unicode(ch:AnsiChar) : WideChar;
 Function  Char_Unicode_CP1252(wc:WideChar) : AnsiChar;
 
+Function  Str_CP437_Unicode(cString:RawByteString;
+            ReplaceControlCode:Boolean=False) : UnicodeString;
+
 Function  Str_CP850_UTF8(aString:RawByteString) : UTF8String;
 
-Function  Str_CP850_Unicode(sString:ShortString; ReplaceControlCode:Boolean=False) : UnicodeString; Overload;
-Function  Str_CP850_Unicode(cString:CP850String; ReplaceControlCode:Boolean=False) : UnicodeString; Overload;
+Function  Str_CP850_Unicode(sString:ShortString;
+            ReplaceControlCode:Boolean=False) : UnicodeString; Overload;
+Function  Str_CP850_Unicode(cString:RawByteString;
+            ReplaceControlCode:Boolean=False) : UnicodeString; Overload;
 
 Function  Str_CP1252_CP850(Const cString:RawByteString) : RawByteString;
-Function  Str_CP1252_Unicode(Const cString:CP1252String) : UnicodeString;
+Function  Str_CP1252_Unicode(Const sString:ShortString) : UnicodeString; Overload;
+Function  Str_CP1252_Unicode(Const aString:RawByteString) : UnicodeString; Overload;
 
 Function  Str_Unicode_CP850(Const uString:UnicodeString) : CP850String;
 Function  Str_Unicode_RawByteString(Const uString:UnicodeString) : RawByteString;
 Function  Str_Unicode_ShortString(Const uString:UnicodeString) : ShortString;
 
 Function  Guess_UTF8(Const Bytes:TBytes) : Boolean; Overload;
-Function  Guess_UTF8(Const aString:AnsiString) : Boolean; Overload;
+Function  Guess_UTF8(Const aString:RawByteString) : Boolean; Overload;
 
 implementation
 
 Uses
   Ply.DateTime,
   Ply.Math,
+  System.AnsiStrings,
   System.IOUtils,
   System.Masks,
   System.Math,
@@ -451,25 +473,22 @@ begin
   Result := System.StringOfChar(WideChar(ch),Count);
 end;
 
-Function  IntToString(Value:Int64; Width:Integer=0; ThousendSeperator:WideChar='?') : UnicodeString;
-var Help : UnicodeString;
+Function  IntToString(Value:Int64; Width:Integer=0;
+            ThousendSeperator:WideChar='?') : String;
 begin
   {$WARNINGS OFF}
-  str(Value:Width,Help);
-  if (ThousendSeperator<>'?') then Help := Insert_ThousendSeperator(Help,ThousendSeperator);
-  Result := Help;
+  str(Value:Width,Result);
+  if (ThousendSeperator<>'?')
+     then Result := Insert_ThousendSeperator(Result,ThousendSeperator);
   {$WARNINGS ON}
 end;
 
-Function  IntToStringLZ(Value:Int64; MinDigits:Integer=3) : UnicodeString;
-var Help : UnicodeString;
+Function  IntToStringLZ(Value:Int64; MinDigits:Integer=0) : String;
 begin
-  Help := IntToStr(Value);
-  While (length(Help)<MinDigits) do Help := '0' + Help;
-  Result := Help;
+  Result := StringAlignRight(MinDigits,IntToString(Value,0),'0');
 end;
 
-Function  IntToCounterFilename(Value:Int64; MinDigits:Integer=0) : UnicodeString;
+Function  IntToString0Z(Value:Int64; MinDigits:Integer=0) : String;
 Const HelpChar : Array [0..35] of Char =
       ('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H'
       ,'I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z');
@@ -501,12 +520,30 @@ begin
   Result := Help;
 end;
 
-Function  StringToInteger(NumberString:String; Default:Integer=0) : Integer;
+Function  StringToInteger(sString:ShortString; Default:Integer=0) : Integer;
 Var Code : Integer;
 begin
-  NumberString := NumberString.Trim;
-  Val(NumberString,Result,Code);
-  // Code indicates the position in "NumberString" at which the conversion failed
+  sString := StringDeleteSpaces(sString);
+  Val(Str_CP850_Unicode(sString),Result,Code);
+  // Code indicates the position in "uString" at which the conversion failed
+  if (Code>0) then Result := Default;
+end;
+
+Function  StringToInteger(aString:RawByteString; Default:Integer=0) : Integer;
+Var Code : Integer;
+begin
+  aString := StringDeleteSpaces(aString);
+  Val(Str_CP850_Unicode(aString),Result,Code);
+  // Code indicates the position in "uString" at which the conversion failed
+  if (Code>0) then Result := Default;
+end;
+
+Function  StringToInteger(uString:String; Default:Integer=0) : Integer;
+Var Code : Integer;
+begin
+  uString := uString.Trim;
+  Val(uString,Result,Code);
+  // Code indicates the position in "uString" at which the conversion failed
   if (Code>0) then Result := Default;
 end;
 
@@ -519,7 +556,29 @@ begin
   if (Code>0) then Result := Default;
 end;
 
-function  DoubleToString(Number:Double; Width:Integer=0; Comma:Byte=2;
+Function  CompToString(Value:Comp; Width:Integer=0) : String;
+begin
+  {$WARNINGS OFF}
+  Str(Value:Width:0,Result);
+  {$WARNINGS ON}
+end;
+
+Function  CompToStringLZ(Value:Comp; Width:Integer=0) : String;
+begin
+  Result := StringAlignRight(Width,CompToString(Value,0),'0');
+end;
+
+Function  StringToComp(uString:String; Default:Comp=0) : Comp;
+Var RetCode : Integer;
+begin
+  Result := Default;
+  if (length(uString)<=20) then
+  begin
+    Val(uString,Result,RetCode);
+  end;
+end;
+
+function  DoubleToString(Number:Double; Width:Integer=0; Comma:Integer=2;
             DecimalSeparator:WideChar='.'; ThousandSeparator:WideChar='?') : String;
 Var PosThousandSeparator : Integer;
 begin
@@ -547,6 +606,13 @@ begin
     end;
   end;
   Result := StringAlignRight(Width,Result,' ');
+end;
+
+Function  DoubleToStringLZ(Number:Double; Width:Integer=0; Comma:Integer=2;
+            DecimalSeparator:WideChar='.'; ThousandSeparator:WideChar='?') : String;
+begin
+  Result := DoubleToString(Number,0,Comma,DecimalSeparator,ThousandSeparator);
+  Result := StringAlignRight(Width,Result,'0');
 end;
 
 Function  StringToDouble(NumberString:UnicodeString; ThousandSeparator:WideChar='?') : Double;
@@ -643,23 +709,74 @@ begin
   end;
 end;
 
-Function  StringReplaceGermanUmlauts(aString:String) : String;
+Function  StringReplaceGermanUmlauts(sString:ShortString) : ShortString;
+var
+  I: Integer;
 begin
-  aString := StringReplace(aString,'ä','ae',[rfReplaceAll]);
-  aString := StringReplace(aString,'ö','oe',[rfReplaceAll]);
-  aString := StringReplace(aString,'ü','ue',[rfReplaceAll]);
-  aString := StringReplace(aString,'ß','ss',[rfReplaceAll]);
-  aString := StringReplace(aString,'Ä','Ae',[rfReplaceAll]);
-  aString := StringReplace(aString,'Ö','Oe',[rfReplaceAll]);
-  Result  := StringReplace(aString,'Ü','Ue',[rfReplaceAll]);
+  for I := Length(sString) downto 1 do
+  begin
+    case sString[i] of
+      _CP850_Umlaut_a      : begin insert('a',sString,i); sString[i+1] := 'e'; end;
+      _CP850_Umlaut_o      : begin insert('o',sString,i); sString[i+1] := 'e'; end;
+      _CP850_Umlaut_u      : begin insert('u',sString,i); sString[i+1] := 'e'; end;
+      _CP850_Umlaut_ss     : begin insert('s',sString,i); sString[i+1] := 's'; end;
+      _CP850_Umlaut_big_a  : begin insert('A',sString,i); sString[i+1] := 'e'; end;
+      _CP850_Umlaut_big_o  : begin insert('O',sString,i); sString[i+1] := 'e'; end;
+      _CP850_Umlaut_big_u  : begin insert('U',sString,i); sString[i+1] := 'e'; end;
+    end;
+  end;
+  Result := sString;
 end;
 
-Function  StringDeleteSpaces(aString:String) : String;
+Function  StringReplaceGermanUmlauts(aString:AnsiString) : AnsiString;
+begin
+  aString := System.AnsiStrings.StringReplace(aString,'ä','ae',[rfReplaceAll]);
+  aString := System.AnsiStrings.StringReplace(aString,'ö','oe',[rfReplaceAll]);
+  aString := System.AnsiStrings.StringReplace(aString,'ü','ue',[rfReplaceAll]);
+  aString := System.AnsiStrings.StringReplace(aString,'ß','ss',[rfReplaceAll]);
+  aString := System.AnsiStrings.StringReplace(aString,'Ä','Ae',[rfReplaceAll]);
+  aString := System.AnsiStrings.StringReplace(aString,'Ö','Oe',[rfReplaceAll]);
+  Result  := System.AnsiStrings.StringReplace(aString,'Ü','Ue',[rfReplaceAll]);
+end;
+
+Function  StringReplaceGermanUmlauts(uString:String) : String;
+begin
+  uString := StringReplace(uString,'ä','ae',[rfReplaceAll]);
+  uString := StringReplace(uString,'ö','oe',[rfReplaceAll]);
+  uString := StringReplace(uString,'ü','ue',[rfReplaceAll]);
+  uString := StringReplace(uString,'ß','ss',[rfReplaceAll]);
+  uString := StringReplace(uString,'Ä','Ae',[rfReplaceAll]);
+  uString := StringReplace(uString,'Ö','Oe',[rfReplaceAll]);
+  Result  := StringReplace(uString,'Ü','Ue',[rfReplaceAll]);
+end;
+
+Function  StringDeleteSpaces(sString:ShortString) : ShortString;
+var i : Integer;
+begin
+  for I := Length(sString) downto 1 do
+  begin
+    if (sString[i]=#32) or (sString[i]=#255) then
+    begin
+      Delete(sString,i,1);
+    end;
+  end;
+  Result := sString;
+end;
+
+Function  StringDeleteSpaces(aString:AnsiString) : AnsiString;
 begin
   // Delete normal Spaces
-  aString := StringReplace(aString,' ','',[rfReplaceAll]);
+  aString := System.AnsiStrings.StringReplace(aString,' ','',[rfReplaceAll]);
   // Delete Non breaking Spaces
-  Result := StringReplace(aString,WideChar(_NBSP),'',[rfReplaceAll]);
+  Result := System.AnsiStrings.StringReplace(aString,AnsiChar(#255),'',[rfReplaceAll]);
+end;
+
+Function  StringDeleteSpaces(uString:String) : String;
+begin
+  // Delete normal Spaces
+  uString := StringReplace(uString,' ','',[rfReplaceAll]);
+  // Delete Non breaking Spaces
+  Result := StringReplace(uString,WideChar(_NBSP),'',[rfReplaceAll]);
 end;
 
 Function  BoolToStringJaNein(ABool:Boolean) : String;
@@ -704,6 +821,7 @@ begin
   end;
 end;
 
+// GetUserName from Winapi
 Function  GetCurrentUserName : string;
 const cnMaxUserNameLen       = 254;
 var sUserName                : string;
@@ -711,38 +829,41 @@ var sUserName                : string;
 begin
   dwUserNameLen := cnMaxUserNameLen-1;
   SetLength(sUserName, cnMaxUserNameLen );
-  GetUserName(PChar(sUserName),dwUserNameLen);
+  Winapi.Windows.GetUserName(PChar(sUserName),dwUserNameLen);
   SetLength(sUserName, dwUserNameLen-1);
   Result := sUserName;
 end;
 
 Function  GetWindowsUsername : String;
-Var UName                    : String;
 begin
-  (* Get CurrentUserName from Kernel32.dll *)
-  UName := GetCurrentUsername;
-  (* Get "Username" from environment-variable *)
-  if (UName='') then UName := GetEnvironmentVariable('USERNAME');
-  (* Get "User" from environment-variable *)
-  if (UName='') then UName := GetEnvironmentVariable('USER');
-  (* Make Uppercase *)
-  Result := UName.ToUpper;
+  // GetCurrentUserName from Winapi
+  Result := GetCurrentUsername;
+  // Get "Username" from environment-variable
+  if (Result='') then Result := GetEnvironmentVariable('USERNAME');
+  // Get "User" from environment-variable
+  if (Result='') then Result := GetEnvironmentVariable('USER');
+  // Make Uppercase
+  Result := PlyUpperCase(Result);
+end;
+
+// GetComputerName form Winapi
+Function  GetCurrentComputerName: String;
+var Len: DWORD;
+begin
+  Len := MAX_COMPUTERNAME_LENGTH+1;
+  SetLength(Result,Len);
+  if Winapi.Windows.GetComputerName(PChar(Result), Len)
+     then SetLength(Result,Len)
+     else RaiseLastOSError;
 end;
 
 Function  GetWindowsComputername : String;
 begin
-  Result := GetEnvironmentVariable('COMPUTERNAME');
+  // GetComputerName form Winapi
+  Result := GetCurrentComputerName;
+  // Get "ComputerName" from environment-variable
+  if (Result='') then Result := GetEnvironmentVariable('COMPUTERNAME');
 end;
-
-//Function  Path_Remove(FilenameWithPath:String) : String;
-//begin
-//  Result := ExtractFileName(FilenameWithPath);
-//end;
-//
-//Function  Path_Only(FilenameWithPath:String) : String;
-//begin
-//  Result := ExtractFilePath(FilenameWithPath);
-//end;
 
 Function  DataEqual(Var Data1,Data2; Size:Longword) : Boolean;
 Const MaxByte  = 65536;
@@ -794,57 +915,8 @@ begin
   Result := GetFolderPath(FOLDERID_Public);
 end;
 
-Const (* ForbiddenCharsWinPath   : Set of AnsiChar = [#0..#31, '"', '*', '<', '>', '?', '|']; *)
-      ForbiddenCharsFilepath : Set of AnsiChar = [#0..#31, #33..#34,#38..#44
-        , #59..#62, #91, #93, #94, #96
-        , #123..#128
-       // #129 = Umlaut ü approved
-        , #130, #131
-       // #132 = Umlaut ä approved
-        , #133..#141
-       // #142 = Umlaut Ä approved
-        , #143..#147
-       // #148 = Umlaut ö approved
-        , #149..#152
-       // #153 = Umlaut Ö approved
-       // #154 = Umlaut Ü approved
-        , #155..#224
-       // #225 = Umlaut ß approved
-        , #226..#255];
-      ForbiddenCharsFilename : Set of AnsiChar = ['/', ':', '\'];
-
-Function  Char_Filename_Valid(ch:AnsiChar) : Boolean;
-begin
-  (* Is this Char valid for filenames? *)
-  if (ch in ForbiddenCharsFilename) or
-     (ch in ForbiddenCharsFilepath) then
-  begin
-    Result := False;
-  end else
-  begin
-    Result := True;
-  end;
-end;
-
-Function  Filename_Make_Valid(Filename_ex_path:String) : String;
-Var
-  i : integer;
-begin
-  For i := length(Filename_ex_path) downto 1 do
-  begin
-    if (Filename_ex_path[i]=' ') then
-    begin
-      Filename_ex_path[i] := '_';
-    end else
-    if not(Char_Filename_valid(AnsiChar(Filename_ex_path[i]))) then
-    begin
-      Delete(Filename_ex_path,i,1);
-    end;
-  end;
-  Result := Filename_ex_path;
-end;
-
-Function  FilenameCheckMask(Filename:String; Mask:String; CaseSensitiv:Boolean=False) : Boolean;
+Function  FilenameCheckMask(Filename:String; Mask:String;
+            CaseSensitiv:Boolean=False) : Boolean;
 begin
   if not(CaseSensitiv) then
   begin
@@ -858,7 +930,8 @@ begin
   end;
 end;
 
-Function  FilenameCheckFilter(Filename:String; Filter:String; CaseSensitiv:Boolean=False) : Boolean;
+Function  FilenameCheckFilter(Filename:String; Filter:String;
+            CaseSensitiv:Boolean=False) : Boolean;
 Var FilterName               : String;
     FilterExt                : String;
     SPos                     : Integer;
@@ -948,7 +1021,8 @@ begin
   end;
 end;
 
-Function  FilenameCheckFilter(Filename:String; Var Filter:TStringList; CaseSensitiv:Boolean=False) : Boolean;
+Function  FilenameCheckFilter(Filename:String; Var Filter:TStringList;
+            CaseSensitiv:Boolean=False) : Boolean;
 var
   I: Integer;
 begin
@@ -1056,25 +1130,6 @@ begin
     ExtractParrentFilePath := '';
   end;
 end;
-
-Const
-  ArithmeticOperators : Set of AnsiChar = ['*','/','-','+'];
-  //  #0 <NUL>     Null
-  //  #1 <SOH>     Start of Heading
-  //  #2 <STX>     Start of Text
-  //  #3 <ETX>     End of Text
-  //  #4 <EOT>     End of Transmission
-  //  #5 <ENQ>     Enquiry
-  //  #6 <ACK>     Acknowledge
-  //  #7 <BEL>     Bell
-  //  #8 <BS>      Backspace
-  //  #9 <HT>      <TAB> Horizontal Tab
-  // #10 <LF>      Line Feed
-  // #11 <VT>      Vertical Tab
-  // #12 <FF>      Form Feed
-  // #13 <CR>      Carriage Return
-  ControlCharacter    : Set of AnsiChar = [#0..#13];
-  WrapCharacter       : Set of AnsiChar = [#32, '|', '/', '\', '-', '(', ')', '[', ']'];
 
 Function CharIsArithmeticOperator(wch:WideChar) : Boolean;
 begin
@@ -1215,12 +1270,12 @@ end;
 
 Function  PlyLowerCase(aString:AnsiString) : AnsiString;
 begin
-  Result := AnsiString(String(aString).ToLower);
+  Result := System.AnsiStrings.LowerCase(aString);
 end;
 
-Function  PlyLowerCase(cString:CP850String) : CP850String;
+Function  PlyLowerCase(cString:RawByteString) : RawByteString;
 begin
-  Result := CP850String(String(cString).ToLower);
+  Result := System.AnsiStrings.LowerCase(cString);
 end;
 
 Function  PlyLowerCase(uString:UnicodeString) : UnicodeString;
@@ -1235,12 +1290,12 @@ end;
 
 Function  PlyUpperCase(aString:AnsiString) : AnsiString;
 begin
-  Result := AnsiString(String(aString).ToUpper);
+  Result := System.AnsiStrings.UpperCase(aString);
 end;
 
-Function  PlyUpperCase(cString:CP850String) : CP850String;
+Function  PlyUpperCase(cString:RawByteString) : RawByteString;
 begin
-  Result := CP850String(String(cString).ToUpper);
+  Result := System.AnsiStrings.UpperCase(cString);
 end;
 
 Function  PlyUpperCase(uString:UnicodeString) : UnicodeString;
@@ -1855,7 +1910,7 @@ begin
     $2194 : Result := #29;            (* ↔ = LEFT RIGHT ARROW                 *)
     $25B2 : Result := #30;            (* ▲ = BLACK UP-POINTING TRIANGLE       *)
     $25BC : Result := #31;            (* ▼ = BLACK DOWN-POINTING TRIANGLE     *)
-    $0020 .. $007E : Result := AnsiChar(Lo(ord(ch))); (* #32 .. #126          *)
+    $0000 .. $007E : Result := AnsiChar(Lo(ord(ch))); (* #32 .. #126          *)
     $2302 : Result := #127;           (* ⌂ = House                            *)
     (* In CP850 we use 128=Ç for the € Euro-Sign, therefor we translate       *)
     (* chr(128) to € Euro-sign                                                *)
@@ -2291,6 +2346,31 @@ begin
   end;
 end;
 
+Function  Str_CP437_Unicode(cString:RawByteString;
+            ReplaceControlCode:Boolean=False) : UnicodeString;
+var
+  SPos : Longint;
+  uString : UnicodeString;
+begin
+  uString := '';
+  SPos    := 0;
+  While (SPos<length(cString)) do
+  begin
+    inc(SPos);
+    (* if char is control code *)
+    if (IsControlCode(cString[SPos])) then
+    begin
+      if (ReplaceControlCode)
+         then uString := uString + Char_CP437_Unicode(cString[SPos])
+         else uString := uString + WideChar(Ord(cString[SPos]));
+    end else
+    begin
+      uString := uString + Char_CP437_Unicode(cString[SPos]);
+    end;
+  end;
+  Result := uString;
+end;
+
 Function  Str_CP850_UTF8(aString:RawByteString) : UTF8String;
 var SPos                     : Longint;
     UTF8                     : AStr3;
@@ -2316,7 +2396,8 @@ begin
   Result := aString;
 end;
 
-Function  Str_CP850_Unicode(sString:ShortString; ReplaceControlCode:Boolean=False) : UnicodeString;
+Function  Str_CP850_Unicode(sString:ShortString;
+            ReplaceControlCode:Boolean=False) : UnicodeString;
 var
   SPos : Longint;
   uString : UnicodeString;
@@ -2340,7 +2421,8 @@ begin
   Result := uString;
 end;
 
-Function  Str_CP850_Unicode(cString:CP850String; ReplaceControlCode:Boolean=False) : UnicodeString;
+Function  Str_CP850_Unicode(cString:RawByteString;
+            ReplaceControlCode:Boolean=False) : UnicodeString;
 var
   SPos : Longint;
   uString : UnicodeString;
@@ -2367,7 +2449,7 @@ end;
 Function  Str_CP1252_CP850(Const cString:RawByteString) : RawByteString;
 var
   i : Integer;
-  Help : AnsiString;
+  Help : RawByteString;
 begin
   SetLength(Help,length(cString));
   for i := 1 to length(cString) do
@@ -2377,15 +2459,28 @@ begin
   Result := Help;
 end;
 
-Function  Str_CP1252_Unicode(Const cString:CP1252String) : UnicodeString;
+Function  Str_CP1252_Unicode(Const sString:ShortString) : UnicodeString; Overload;
 var
   i : Integer;
   Help : UnicodeString;
 begin
-  SetLength(Help,length(cString));
-  for i := 1 to length(cString) do
+  SetLength(Help,length(sString));
+  for i := 1 to length(sString) do
   begin
-    Help[i] := Char_CP1252_Unicode(cString[i]);
+    Help[i] := Char_CP1252_Unicode(sString[i]);
+  end;
+  Result := Help;
+end;
+
+Function  Str_CP1252_Unicode(Const aString:RawByteString) : UnicodeString;
+var
+  i : Integer;
+  Help : UnicodeString;
+begin
+  SetLength(Help,length(aString));
+  for i := 1 to length(aString) do
+  begin
+    Help[i] := Char_CP1252_Unicode(aString[i]);
   end;
   Result := Help;
 end;
@@ -2468,7 +2563,7 @@ begin
                                 else Result := False;
 end;
 
-Function  Guess_UTF8(Const aString:AnsiString) : Boolean;
+Function  Guess_UTF8(Const aString:RawByteString) : Boolean;
 Var Bytes : TBytes;
 begin
   Bytes := BytesOf(aString);

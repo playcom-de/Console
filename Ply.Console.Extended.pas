@@ -2,7 +2,7 @@
 
   Name          : Ply.Console.Extended.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 25.07.2023
+  Last modified : 05.09.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -154,31 +154,60 @@ Procedure WriteRight(y:Smallint; aString:String);
 
 Procedure CursorMoveField(Var FieldNumber:Integer; MinNum:Integer=0; MaxNum:Integer=99);
 
-Function  InputString(iString:String; iLength,StrLength:Integer; TColor,BColor:Byte;
-            Var Key:Word; ShowX:Integer=0; ShowY:Integer=0) : String; Overload;
-Function  InputString(iString:String; iLength,StrLength:Integer; Var Key:Word) : String; Overload;
-Function  InputString(x,y:Integer; iString:String; iLength,StrLength:Integer; Var Key:Word) : String; Overload;
+Function  InputString(iString:String; iLength,StrLength:Integer;
+            TColor,BColor:Byte; Var Key:Word; Options:tInputOptions=[];
+            ShowX:Integer=0; ShowY:Integer=0) : String; Overload;
+Function  InputString(iString:String; iLength,StrLength:Integer; Var Key:Word;
+            Options:tInputOptions=[]) : String; Overload;
 Function  InputString(x,y:Integer; iString:String; iLength,StrLength:Integer;
-            TColor,BColor:Byte; Var Key:Word; ShowX:Integer=0; ShowY:Integer=0) : String; Overload;
+            Var Key:Word; Options:tInputOptions=[]) : String; Overload;
+Function  InputString(x,y:Integer; iString:String; iLength,StrLength:Integer;
+            TColor,BColor:Byte; Var Key:Word; ShowX:Integer=0; ShowY:Integer=0;
+            Options:tInputOptions=[]) : String; Overload;
 
-Function  InputString(iString:String; iLength:Integer; TColor,BColor:Byte; var Key:Word) : String; Overload;
-Function  InputString(x,y:Integer; iString:String; iLength:Integer; TColor,BColor:Byte; var Key:Word) : String; Overload;
+Function  InputString(iString:String; iLength:Integer; TColor,BColor:Byte;
+            var Key:Word; Options:tInputOptions=[]) : String; Overload;
+Function  InputString(x,y:Integer; iString:String; iLength:Integer;
+            TColor,BColor:Byte; var Key:Word;
+            Options:tInputOptions=[]) : String; Overload;
 
-Function  InputString(iString:String; iLength:Integer; var Key:Word) : String; Overload;
-Function  InputString(x,y:Integer; iString:String; iLength:Integer; var Key:Word) : String; Overload;
+Function  InputString(iString:String; iLength:Integer; var Key:Word;
+            Options:tInputOptions=[]) : String; Overload;
+Function  InputString(x,y:Integer; iString:String; iLength:Integer;
+            var Key:Word; Options:tInputOptions=[]) : String; Overload;
 
-Function  InputString(iString:String; iLength:Integer; StrLength:Integer=-1) : String; Overload;
-Function  InputString(x,y:Integer; iString:String; iLength:Integer; StrLength:Integer=-1) : String; Overload;
+Function  InputString(iString:String; iLength:Integer; StrLength:Integer=-1;
+            Options:tInputOptions=[]) : String; Overload;
+Function  InputString(x,y:Integer; iString:String; iLength:Integer;
+            StrLength:Integer=-1; Options:tInputOptions=[]) : String; Overload;
 
-Function  InputDouble(iDouble:Double; iLength:Integer; Var Key:Word) : Double; Overload;
-Function  InputDouble(x,y:Integer; iDouble:Double; iLength:Integer; Var Key:Word) : Double; Overload;
-Function  InputDouble(iDouble:Double; iLength:Integer; Var Key:Word; Width:Integer;
+Function  InputChar(iChar:WideChar; Var Key:Word;
+            Options:tInputOptions=[]) : WideChar; Overload;
+Function  InputChar(x,y:Integer; iChar:WideChar; Var Key:Word;
+            Options:tInputOptions=[]) : WideChar; Overload;
+
+Function  InputDouble(iDouble:Double; iLength:Integer; Var Key:Word;
+            Options:tInputOptions=[]; Comma:Byte=2;
+            DecimalSeparator:WideChar='.';
+            ThousandSeparator:WideChar='?') : Double; Overload;
+Function  InputDouble(x,y:Integer; iDouble:Double; iLength:Integer;
+            Var Key:Word; Options:tInputOptions=[];
             Comma:Byte=2; DecimalSeparator:WideChar='.';
             ThousandSeparator:WideChar='?') : Double; Overload;
 
-Function  InputInteger(iInteger:Integer; iLength:Integer; Var Key:Word) : Integer; Overload;
-Function  InputInteger(x,y:Integer; iInteger:Integer; iLength:Integer; Var Key:Word) : Integer; Overload;
-Function  InputInteger(iInteger:Int64; iLength:Integer; Var Key:Word) : Int64; Overload;
+Function  InputInteger(iInteger:Integer; iLength:Integer; Var Key:Word;
+            Options:tInputOptions=[]) : Integer; Overload;
+Function  InputInteger(x,y:Integer; iInteger:Integer; iLength:Integer;
+            Var Key:Word; Options:tInputOptions=[]) : Integer; Overload;
+Function  InputInteger(iInteger:Int64; iLength:Integer; Var Key:Word;
+            Options:tInputOptions=[]) : Int64; Overload;
+Function  InputInteger(iInteger:Comp; iLength:Integer; Var Key:Word;
+            Options:tInputOptions=[]) : Comp; Overload;
+
+Function  InputEmail(Email:String; iLength,StrLength:Integer;
+            Var Key:Word; Options:tInputOptions=[]) : String; Overload;
+Function  InputEmail(x,y:Integer; Email:String; iLength,StrLength:Integer;
+            Var Key:Word; Options:tInputOptions=[]) : String; Overload;
 
 Function  LineSelectExit(FromY,ToY,FromX,ToX:Integer; var CurrentY:Integer) : Word; Overload;
 Function  LineSelectExit(FromY,ToY:Integer; var CurrentY:Integer) : Word; Overload;
@@ -1100,10 +1129,10 @@ begin
   FFrameAttr.Color(Yellow,Blue);
   FTextAttr.Color(LightGray,Black);
   // FBackground: Hi=ClrBackground=False, Lo=ColorBackground=Black
-  FBackground := $0000;
-  FTextTopLeft := '';
-  FTextTitle := '';
-  FTextTopRight := '';
+  FBackground     := $0000;
+  FTextTopLeft    := '';
+  FTextTitle      := '';
+  FTextTopRight   := '';
   FTextBottomLeft := '';
 end;
 
@@ -1351,19 +1380,13 @@ begin
 end;
 
 Function  InputString(iString:String; iLength,StrLength:Integer; TColor,BColor:Byte;
-            Var Key:Word; ShowX:Integer=0; ShowY:Integer=0) : String; Overload
+            Var Key:Word; Options:tInputOptions=[]; ShowX:Integer=0; ShowY:Integer=0) : String; Overload
 Var wch                      : WideChar;
     b                        : Integer;
     cx                       : Integer;
     dx,dy                    : Integer;
     SaveString               : String;
     SaveTextAttr             : TTextAttr;
-    InpCursorPos1            : Boolean;
-    InpExitOnKey             : Boolean;
-    InpClrIfKey              : Boolean;
-    InpPassword              : Boolean;
-    InpInsertMode            : Boolean;
-    InpDate                  : Boolean;
     FromPos                  : Integer;
 
   Procedure EmbeddedOutput;
@@ -1372,15 +1395,13 @@ Var wch                      : WideChar;
   begin
     gotoxy(dx,dy);
     AText := Copy(iString,FromPos,iLength);
-    if (InpPassword) then
+    if (inpPassword in Options) then
     begin
-      Textcolor(TColor+1);
       For l := 1 to length(AText) do
       begin
         AText[l] := '*';
       end;
       Write(StringAlignLeft(iLength,AText));
-      Color(TColor,BColor);
     end else
     begin
       WriteXY(dx,dy,StringAlignLeft(iLength,AText));
@@ -1396,7 +1417,6 @@ Var wch                      : WideChar;
     begin
       if (StrLength>iLength) then
       begin
-        Color(TColor,BColor);
         WriteXY(dx+iLength,dy,' ');
       end;
     end;
@@ -1405,7 +1425,6 @@ Var wch                      : WideChar;
       TextAttr := GetTextAttr(ShowX,ShowY);
       WriteXY(ShowX,ShowY,IntToString(FromPos+cx,3)+'|'+IntToString(Length(iString),3)+': ');
       WriteString(iString); ClrEol;
-      Color(TColor,BColor);
     end;
     gotoxy(dx+cx,dy);
   end;
@@ -1415,24 +1434,24 @@ begin
   SaveString    := iString;
   dx            := wherex;
   dy            := wherey;
-  iLength       := Min(MaxX-dx-0,iLength);
+  iLength       := Min(MaxX-dx,iLength);
   cx            := Min(Length(iString),iLength);
   FromPos       := Max(Length(iString)-iLength+1,1);
   iString       := Copy(iString,1,StrLength);
 
-  InpCursorPos1 := (Key and _Inp_CursorPos1) = _Inp_CursorPos1;
-  InpExitOnKey  := (Key and _Inp_ExitOnKey ) = _Inp_ExitOnKey;
-  InpClrIfKey   := (Key and _Inp_ClrIfKey  ) = _Inp_ClrIfKey;
-  InpInsertMode := (Key and _Inp_InsertMode) = _Inp_InsertMode;
-  InpPassword   := (Key and _Inp_Password  ) = _Inp_Password;
-  InpDate       := (Key and _Inp_Date      ) = _Inp_Date;
-
-  Console.Modes.InsertMode := InpInsertMode;
-  if (InpInsertMode) then Console.CursorOnBigSize
-                     else Console.CursorOnNormalSize;
+  if (inpInsertMode in Options) then
+  begin
+    Console.Modes.InsertMode := True;
+    Console.CursorOnBigSize;
+  end else
+  begin
+    Console.Modes.InsertMode := False;
+    Console.CursorOnNormalSize;
+  end;
 
   // Set the cursor to the beginning of the input field
-  if (InpCursorPos1) or (InpClrIfKey) then
+  if (inpCursorPos1 in Options) or
+     (inpClrIfKey   in Options) then
   begin
     cx      := 0;
     FromPos := 1;
@@ -1444,7 +1463,7 @@ begin
   repeat
     wch := ReadkeyW(Key);
 
-    if (InpClrIfKey) and not(CharIsControlCharacter(wch)) then
+    if (inpClrIfKey in Options) and not(CharIsControlCharacter(wch)) then
     begin
       // Clear iString if first key is normal input / not a movement key
       if (Key<>_Return) and (Key<>_Tab)  and (Key<>_PgDown) and
@@ -1452,7 +1471,7 @@ begin
       begin
         iString := '';
       end;
-      InpClrIfKey := False;
+      Options := Options - [inpClrIfKey];
     end;
 
     // Copy to clipboard
@@ -1529,10 +1548,10 @@ begin
     end else
     if (Key=_Insert) then
     begin
-      InpInsertMode := not(InpInsertMode);
-      Console.Modes.InsertMode := InpInsertMode;
-      if (InpInsertMode) then Console.CursorOnBigSize
-                         else Console.CursorOnNormalSize;
+      Console.Modes.InsertMode := not(Console.Modes.InsertMode);
+      if (Console.Modes.InsertMode)
+         then Console.CursorOnBigSize
+         else Console.CursorOnNormalSize;
     end else
     if (Key=_DELETE_CRT) then
     begin
@@ -1553,7 +1572,7 @@ begin
     end else
     begin
       // if Date-Input, do not accept  (+|-) as input text, but return as value (key) to the calling function
-      if not(InpDate) or ((Key<>_Plus) and (Key<>_Minus)) then
+      if not(InpDate in Options) or ((Key<>_Plus) and (Key<>_Minus)) then
       begin
         if ((Key<_F1)         or  (Key>_F12))        and
            ((Key<_CTRL_F1)    or  (Key>_CTRL_F12))   and
@@ -1571,29 +1590,45 @@ begin
           begin
             if not(CharIsControlCharacter(wch)) then
             begin
+              if (inpDate in Options) then
+              begin
+                if (wch=',') then wch := '.';
+              end;
               if (length(iString)>=FromPos+cx) then
               begin
-                if (InpInsertMode) then
+                if (Console.Modes.InsertMode) then
                 begin
                   if (Length(iString)<StrLength) then
                   begin
-                    insert(' ',iString,FromPos+cx);
-                    iString[FromPos+cx] := wch;
-                    if (cx<iLength) then inc(cx)
-                                        else inc(FromPos);
+                    insert(wch,iString,FromPos+cx);
+                    if (cx<iLength) then inc(cx) else
+                    if (iLength<StrLength) then inc(FromPos);
+                  end else
+                  if (StrLength=1) then
+                  begin
+                    iString := wch;
+                    FromPos := 1;
+                    cx      := 0;
                   end;
                 end else
                 begin
                   iString[FromPos+cx] := wch;
-                  if (cx<iLength) then inc(cx)
-                                      else inc(FromPos);
+                  if (cx<iLength) then inc(cx) else
+                  if (iLength<StrLength) then inc(FromPos);
+                  if (StrLength=1) then cx := 0;
                 end;
               end else
               if (length(iString)<StrLength) then
               begin
                 iString := iString + wch;
-                if (cx<iLength-1) then inc(cx)
-                                      else inc(FromPos);
+                if (cx<iLength-1) then inc(cx) else
+                if (iLength<StrLength) then inc(FromPos);
+              end else
+              if (StrLength=1) then
+              begin
+                iString := wch;
+                FromPos := 1;
+                cx      := 0;
               end;
             end;
           end;
@@ -1607,7 +1642,7 @@ begin
         (Key=_CTRL_Up)   or (Key=_CTRL_Down)   or
         (Key=_CTRL_Plus) or (Key=_CTRL_Minus)  or
         (Key=_ALT_Plus)  or (Key=_ALT_Minus)   or
-        ((InpExitOnKey) and (Key<>_Pos1) and (Key<>_End) and (Key<>_Left) and (Key<>_Right)) or
+        ((InpExitOnKey in Options) and (Key<>_Pos1) and (Key<>_End) and (Key<>_Left) and (Key<>_Right)) or
         ((Key>=_F1)         and (Key<=_F12))        or
         ((Key>=_Shift_F1)   and (Key<=_Shift_F12))  or
         ((Key>=_CTRL_F1)    and (Key<=_CTRL_F12))   or
@@ -1622,103 +1657,167 @@ begin
   TextAttr  := SaveTextAttr;
 end;
 
-Function  InputString(iString:String; iLength,StrLength:Integer; Var Key:Word) : String; Overload;
+Function  InputString(iString:String; iLength,StrLength:Integer; Var Key:Word;
+            Options:tInputOptions=[]) : String; Overload;
 begin
-  Result := InputString(iString,iLength,StrLength,Black,LightGray,Key);
-end;
-
-Function  InputString(x,y:Integer; iString:String; iLength,StrLength:Integer; Var Key:Word) : String; Overload;
-begin
-  GotoXY(x,y);
-  Result := InputString(iString,iLength,StrLength,Black,LightGray,Key);
+  Result := InputString(iString,iLength,StrLength,Black,LightGray,Key,Options);
 end;
 
 Function  InputString(x,y:Integer; iString:String; iLength,StrLength:Integer;
-            TColor,BColor:Byte; Var Key:Word; ShowX:Integer=0; ShowY:Integer=0) : String; Overload
+            Var Key:Word; Options:tInputOptions=[]) : String; Overload;
 begin
   GotoXY(x,y);
-  Result := InputString(iString,iLength,StrLength,TColor,BColor,Key,ShowX,ShowY);
+  Result := InputString(iString,iLength,StrLength,Black,LightGray,Key,Options);
 end;
 
-Function  InputString(iString:String; iLength:Integer; TColor,BColor:Byte; var Key:Word) : String;
-begin
-  Result := InputString(iString,iLength,iLength,TColor,BColor,Key);
-end;
-
-Function  InputString(x,y:Integer; iString:String; iLength:Integer; TColor,BColor:Byte; var Key:Word) : String;
+Function  InputString(x,y:Integer; iString:String; iLength,StrLength:Integer;
+            TColor,BColor:Byte; Var Key:Word; ShowX:Integer=0; ShowY:Integer=0;
+            Options:tInputOptions=[]) : String; Overload
 begin
   GotoXY(x,y);
-  Result := InputString(iString,iLength,TColor,BColor,Key);
+  Result := InputString(iString,iLength,StrLength,TColor,BColor,Key,Options,ShowX,ShowY);
 end;
 
-Function  InputString(iString:String; iLength:Integer; var Key:Word) : String;
+Function  InputString(iString:String; iLength:Integer; TColor,BColor:Byte;
+            var Key:Word; Options:tInputOptions=[]) : String;
 begin
-  Result := InputString(iString,iLength,Black,LightGray,Key);
+  Result := InputString(iString,iLength,iLength,TColor,BColor,Key,Options);
 end;
 
-Function  InputString(x,y:Integer; iString:String; iLength:Integer; var Key:Word) : String;
+Function  InputString(x,y:Integer; iString:String; iLength:Integer;
+            TColor,BColor:Byte; var Key:Word; Options:tInputOptions=[]) : String;
 begin
   GotoXY(x,y);
-  Result := InputString(iString,iLength,Key);
+  Result := InputString(iString,iLength,TColor,BColor,Key,Options);
 end;
 
-Function  InputString(iString:String; iLength:Integer; StrLength:Integer=-1) : String;
+Function  InputString(iString:String; iLength:Integer; var Key:Word;
+            Options:tInputOptions=[]) : String;
+begin
+  Result := InputString(iString,iLength,Black,LightGray,Key,Options);
+end;
+
+Function  InputString(x,y:Integer; iString:String; iLength:Integer;
+            var Key:Word; Options:tInputOptions=[]) : String;
+begin
+  GotoXY(x,y);
+  Result := InputString(iString,iLength,Key,Options);
+end;
+
+Function  InputString(iString:String; iLength:Integer; StrLength:Integer=-1;
+            Options:tInputOptions=[]) : String;
 Var Key : Word;
 begin
   if (StrLength=-1)
-     then Result := InputString(iString,iLength,Key)
-     else Result := InputString(iString,iLength,StrLength,Black,Lightgray,Key);
+     then Result := InputString(iString,iLength,Key,Options)
+     else Result := InputString(iString,iLength,StrLength,Black,Lightgray,Key,Options);
 end;
 
-Function  InputString(x,y:Integer; iString:String; iLength:Integer; StrLength:Integer=-1) : String;
+Function  InputString(x,y:Integer; iString:String; iLength:Integer;
+            StrLength:Integer=-1; Options:tInputOptions=[]) : String;
 begin
   GotoXY(x,y);
-  Result := InputString(iString,iLength,StrLength);
+  Result := InputString(iString,iLength,StrLength,Options);
 end;
 
-Function  InputDouble(iDouble:Double; iLength:Integer; Var Key:Word) : Double;
+Function  InputChar(iChar:WideChar; Var Key:Word;
+            Options:tInputOptions=[]) : WideChar;
+Var uString : String;
 begin
-  Result := StringToDouble(InputString(DoubleToString(iDouble),iLength,Key));
+  uString := InputString(iChar,1,Key,Options);
+  if (uString<>'')
+     then Result := uString[1]
+     else Result := ' ';
 end;
 
-Function  InputDouble(x,y:Integer; iDouble:Double; iLength:Integer; Var Key:Word) : Double;
+Function  InputChar(x,y:Integer; iChar:WideChar; Var Key:Word;
+            Options:tInputOptions=[]) : WideChar;
 begin
   GotoXY(x,y);
-  Result := StringToDouble(InputString(DoubleToString(iDouble),iLength,Key));
+  Result := InputChar(iChar,Key,Options);
 end;
 
-Function  InputDouble(iDouble:Double; iLength:Integer; Var Key:Word; Width:Integer;
-            Comma:Byte=2; DecimalSeparator:WideChar='.';
-            ThousandSeparator:WideChar='?') : Double; Overload;
+Function  InputDouble(iDouble:Double; iLength:Integer; Var Key:Word;
+            Options:tInputOptions=[]; Comma:Byte=2;
+            DecimalSeparator:WideChar='.';
+            ThousandSeparator:WideChar='?') : Double;
 begin
-  Result := StringToDouble(InputString(DoubleToString(iDouble,Width,Comma
+  Result := StringToDouble(InputString(DoubleToString(iDouble,0,Comma
               ,DecimalSeparator,ThousandSeparator),iLength,Key),ThousandSeparator);
 end;
 
-Function  InputInteger(iInteger:Integer; iLength:Integer; Var Key:Word) : Integer;
-Var DoubleResult : Double;
-begin
-  // Convert via double, to process arithmetic operations
-  DoubleResult := StringToDouble(InputString(iInteger.ToString,iLength,Key));
-  if (DoubleResult>=Integer.MinValue) and
-     (DoubleResult<=Integer.MaxValue) then Result := Round(DoubleResult)
-                                      else Result := 0;
-end;
-
-Function  InputInteger(x,y:Integer; iInteger:Integer; iLength:Integer; Var Key:Word) : Integer; Overload;
+Function  InputDouble(x,y:Integer; iDouble:Double; iLength:Integer;
+            Var Key:Word; Options:tInputOptions=[];
+            Comma:Byte=2; DecimalSeparator:WideChar='.';
+            ThousandSeparator:WideChar='?') : Double;
 begin
   GotoXY(x,y);
-  Result := InputInteger(iInteger,iLength,Key);
+  Result := StringToDouble(InputString(DoubleToString(iDouble,0,Comma
+              ,DecimalSeparator,ThousandSeparator),iLength,Key),ThousandSeparator);
 end;
 
-Function  InputInteger(iInteger:Int64; iLength:Integer; Var Key:Word) : Int64;
+Function  InputInteger(iInteger:Integer; iLength:Integer; Var Key:Word;
+            Options:tInputOptions=[]) : Integer;
 Var DoubleResult : Double;
 begin
+  if (Key=1) then Options := Options + [inpCursorPos1];
   // Convert via double, to process arithmetic operations
-  DoubleResult := StringToDouble(InputString(iInteger.ToString,iLength,Key));
+  DoubleResult := StringToDouble(InputString(iInteger.ToString,iLength,Key,Options));
   if (DoubleResult>=Integer.MinValue) and
      (DoubleResult<=Integer.MaxValue) then Result := Round(DoubleResult)
                                       else Result := 0;
+end;
+
+Function  InputInteger(x,y:Integer; iInteger:Integer; iLength:Integer;
+            Var Key:Word; Options:tInputOptions=[]) : Integer; Overload;
+begin
+  GotoXY(x,y);
+  Result := InputInteger(iInteger,iLength,Key,Options);
+end;
+
+Function  InputInteger(iInteger:Int64; iLength:Integer; Var Key:Word;
+            Options:tInputOptions=[]) : Int64;
+Var DoubleResult : Double;
+begin
+  // Convert via double, to process arithmetic operations
+  DoubleResult := StringToDouble(InputString(iInteger.ToString,iLength,Key,Options));
+  if (DoubleResult>=Int64.MinValue) and
+     (DoubleResult<=Int64.MaxValue) then Result := Round(DoubleResult)
+                                    else Result := 0;
+end;
+
+Function  InputInteger(iInteger:Comp; iLength:Integer; Var Key:Word;
+            Options:tInputOptions=[]) : Comp;
+Var DoubleResult : Double;
+begin
+  // Convert via double, to process arithmetic operations
+  DoubleResult := StringToDouble(InputString(CompToString(iInteger),iLength,Key,Options));
+  if (DoubleResult>=Int64.MinValue) and
+     (DoubleResult<=Int64.MaxValue) then Result := Round(DoubleResult)
+                                    else Result := 0;
+end;
+
+Function  InputEmail(Email:String; iLength,StrLength:Integer;
+            Var Key:Word; Options:tInputOptions=[]) : String;
+begin
+  Result := InputEmail(WhereX,WhereY,Email,iLength,StrLength,Key,Options);
+end;
+
+Function  InputEmail(x,y:Integer; Email:String; iLength,StrLength:Integer;
+            Var Key:Word; Options:tInputOptions=[]) : String;
+Var Validate : Boolean;
+begin
+  Repeat
+    Email := TrimLeft(InputString(x,y,EMail,60,255,Key,Options));
+    Validate := ValidateEmail(EMail);
+    if (Email<>'') and not(Validate) then
+    begin
+      ConsoleShowNote('Prüfung Email-Adresse'
+        ,'Die eingegebene Email-Adresse ist nicht korrekt!'
+        ,Email,'Bitte korrigieren.');
+    end;
+  Until (EMail='') or (Validate);
+  Result := EMail;
 end;
 
 Function  LineSelectExit(FromY,ToY,FromX,ToX:Integer; var CurrentY:Integer) : Word;

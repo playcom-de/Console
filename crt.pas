@@ -203,6 +203,8 @@ Type TConsoleString = Record
        Procedure InvertString(Index:Integer=1; Count:Integer=-1);
        Procedure UnderlineString(Index:Integer=1; Count:Integer=-1);
        Procedure OutlineString(Index:Integer=1; Count:Integer=-1);
+       Procedure InvertSearchString(SearchString:String; Offset:Integer=1;
+                   InvertAll:Boolean=True; CaseSensitive:Boolean=False);
      end;
 
      tScreenData = Record
@@ -317,6 +319,11 @@ procedure WriteString(x,y: integer; Const uString:UnicodeString); Overload;
 procedure WriteString(Const uString:UnicodeString); Overload
 procedure WriteString(x,y: integer; Const cString:TConsoleString); Overload;
 procedure WriteString(Const cString:TConsoleString); Overload;
+
+Procedure WritelnString(Const sString:ShortString); Overload;
+Procedure WritelnString(Const aString:AnsiString); Overload;
+Procedure WritelnString(Const uString:UnicodeString); Overload;
+Procedure WritelnString(Const cString:TConsoleString); Overload;
 
 Function  InvertTextAttr(aTextAttr:tTextAttr) : TTextAttr;
 Function  UnderlineTextAttr(aTextAttr:TTextAttr) : tTextAttr;
@@ -857,7 +864,7 @@ end;
 
 Function  TConsoleString.ToUpper : UnicodeString;
 begin
-  Result := UnicodeString(FStrChar).ToUpper;
+  Result := PlyUpperCase(UnicodeString(FStrChar));
 end;
 
 Procedure TConsoleString.Clear(cChar:WideChar=' '; cAttr:Word=0);
@@ -937,11 +944,14 @@ end;
 
 Function  TConsoleString.StringCopy(Index:integer=1; Count:integer=-1) : tConsoleString;
 begin
-  if (Count=-1) then Count := Length(FStrChar)-Index+1;
-  Count := Min(Count,Length(FStrChar)-Index+1);
+  if (Count=-1) then Count := Length(FStrChar);
+  Count := ValueMinMax(Count,0,Length(FStrChar)-Index+1);
   Result.Init(Count);
-  Result.FStrChar := Copy(FStrChar,Index-1,Count);
-  Result.FStrAttr := Copy(FStrAttr,Index-1,Count);
+  if (Count>0) then
+  begin
+    Result.FStrChar := Copy(FStrChar,Index-1,Count);
+    Result.FStrAttr := Copy(FStrAttr,Index-1,Count);
+  end;
 end;
 
 Function  TConsoleString.StringAlignLeft(Count:Integer; ch:WideChar=' '; Cut:Boolean=False) : TConsoleString;
@@ -1017,6 +1027,31 @@ begin
       if (i=Index+Count-2) then FStrAttr[i] := OutlineEndTextAttr(FStrAttr[i])
                            else FStrAttr[i] := OutlineCenterTextAttr(FStrAttr[i])
     end;
+  end;
+end;
+
+Procedure TConsoleString.InvertSearchString(SearchString:String; Offset:Integer=1;
+            InvertAll:Boolean=True; CaseSensitive:Boolean=False);
+Var ConString  : String;
+    sPos       : Integer;
+begin
+  if (SearchString<>'') then
+  begin
+    ConString := uString;
+    if not(CaseSensitive) then
+    begin
+      SearchString := PlyUpperCase(SearchString);
+      ConString    := PlyUpperCase(ConString);
+    end;
+    Repeat
+      sPos := Pos(SearchString,ConString,Offset);
+      if (sPos>=1) then
+      begin
+        InvertString(sPos,length(SearchString));
+        if not(InvertAll) then Exit;
+        Offset := sPos + Length(SearchString);
+      end;
+    Until (sPos<=0);
   end;
 end;
 
@@ -2158,7 +2193,7 @@ end;
 
 Procedure WriteXY(x,y:Integer; sString:UTF8String); Overload;
 begin
-  WriteXY(x,y,UnicodeString(sString));
+  WriteXY(x,y,UTF8ToString(sString));
 end;
 
 Procedure WriteXY(x,y:Integer; TColor:Byte; sString:UTF8String); Overload;
@@ -2166,7 +2201,7 @@ Var SaveAttr : tTextAttr;
 begin
   SaveAttr := TextAttr;
   Textcolor(TColor);
-  WriteXY(x,y,UnicodeString(sString));
+  WriteXY(x,y,UTF8ToString(sString));
   TextAttr := SaveAttr;
 end;
 
@@ -2451,6 +2486,26 @@ end;
 procedure WriteString(Const cString:TConsoleString); Overload;
 begin
   WriteString(WhereX,WhereY,cString);
+end;
+
+Procedure WritelnString(Const sString:ShortString);
+begin
+  WriteString(sString+#13+#10);
+end;
+
+Procedure WritelnString(Const aString:AnsiString);
+begin
+  WriteString(aString+sLineBreak);
+end;
+
+Procedure WritelnString(Const uString:UnicodeString);
+begin
+  WriteString(uString+WideChar(#13)+WideChar(#10));
+end;
+
+Procedure WritelnString(Const cString:TConsoleString);
+begin
+  WriteString(cString + TConsoleString.Create(sLineBreak));
 end;
 
 Function  InvertTextAttr(aTextAttr:TTextAttr) : tTextAttr;

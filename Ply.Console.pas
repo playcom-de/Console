@@ -2,7 +2,7 @@
 
   Name          : Ply.Console.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 25.07.2023
+  Last modified : 04.09.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -766,6 +766,8 @@ Type tConsole = Class
        Procedure SetInputCodepage(Const aCodepage:tCodepage);
        Function  GetOutputCodepage : tCodepage;
        Procedure SetOutputCodepage(Const aCodepage:tCodepage);
+       Function  GetSystemCodePage : tCodepage;
+       Procedure SetSystemCodepage(Const Value:tCodepage);
 
        // Current Windows ANSI codepage (ACP) for the operating system.
        Function  GetWindowsCodepage : TCodepage;
@@ -824,6 +826,7 @@ Type tConsole = Class
        Property InputCodepage : TCodepage Read FInputCodepage Write SetInputCodepage;
        Property OutputCodepage : TCodepage Read FOutputCodepage Write SetOutputCodepage;
        Property CodepageWindows : TCodepage Read GetWindowsCodepage;
+       Property CodepageSystem : TCodepage Read GetSystemCodePage Write SetSystemCodepage;
        Property CodepageWindowsLocale : TCodepage Read GetWindowsLocaleCodepage;
        Property KeyboardLayout : TKeyboardLayout Read FKeyboardLayout;
 
@@ -961,7 +964,6 @@ Uses
   System.Math,
   System.StrUtils,
   System.Win.Registry,
-  UxTheme,
   VCL.Dialogs,
   VCL.Forms;        // Get TWorkAreas from TScreen
 
@@ -1733,7 +1735,7 @@ begin
   S := TStrings(Data);
   Temp := Format('[%4d] : %-35s %3d x %3d'
             , [S.Count,String(LogFont.lfFaceName),LogFont.lfWidth,LogFont.lfHeight]);
-  if (S.Count = 0) or (AnsiCompareText(Copy(Temp,10,255),Copy(S[S.Count-1],10,255)) <> 0)
+  if (S.Count = 0) or (CompareText(Copy(Temp,10,255),Copy(S[S.Count-1],10,255)) <> 0)
      then S.Add(Temp);
   Result := 1;
 end;
@@ -3716,6 +3718,16 @@ Procedure tConsole.SetOutputCodepage(Const aCodepage:tCodepage);
 begin
   SetConsoleOutputCP(aCodepage);
   FOutputCodepage := aCodepage;
+end;
+
+Function  tConsole.GetSystemCodePage : tCodepage;
+begin
+  Result := System.DefaultSystemCodePage;
+end;
+
+Procedure tConsole.SetSystemCodepage(Const Value:tCodepage);
+begin
+  SetMultiByteConversionCodePage(Value);
 end;
 
 Function  tConsole.GetWindowsCodepage : tCodepage;

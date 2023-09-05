@@ -2,7 +2,7 @@
 
   Name          : Ply.Types.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 01.05.2023
+  Last modified : 02.08.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -78,20 +78,31 @@ Const FM_R        = $00; (* #00 Filemode read only                            *)
       fmShareR    = FM_R +FM_Deny_No; (* $40 = #64                            *)
       fmShare     = FM_RW+FM_Deny_No; (* $42 = #66 = standard                 *)
 
-Type AStr3         = String[3];
-     AStr4         = String[4];
-     AChar3        = Array [0..2] of AnsiChar;
-     AChar4        = Array [0..3] of AnsiChar;
-     WStr20        = Array [0..19] of WideChar;
-     WStr30        = Array [0..29] of WideChar;
-     TDynStr       = TArray<WideChar>;
-     TDynWord      = TArray<Word>;
-     TDynLongword  = Array of Longword;
+Const _CP850_Umlaut_a        = #132;
+      _CP850_Umlaut_o        = #148;
+      _CP850_Umlaut_u        = #129;
+      _CP850_Umlaut_ss       = #225;
+      _CP850_Umlaut_big_A    = #142;
+      _CP850_Umlaut_big_O    = #153;
+      _CP850_Umlaut_big_U    = #154;
 
-     UTF8String    = Type AnsiString(_Codepage_UTF8);
-     CP437String   = Type AnsiString(_Codepage_437);
-     CP850String   = Type AnsiString(_Codepage_850);
-     CP1252String  = Type AnsiString(_Codepage_1252);
+      ArithmeticOperators : Set of AnsiChar = ['*','/','-','+'];
+      //  #0 <NUL>     Null
+      //  #1 <SOH>     Start of Heading
+      //  #2 <STX>     Start of Text
+      //  #3 <ETX>     End of Text
+      //  #4 <EOT>     End of Transmission
+      //  #5 <ENQ>     Enquiry
+      //  #6 <ACK>     Acknowledge
+      //  #7 <BEL>     Bell
+      //  #8 <BS>      Backspace
+      //  #9 <HT>      <TAB> Horizontal Tab
+      // #10 <LF>      Line Feed
+      // #11 <VT>      Vertical Tab
+      // #12 <FF>      Form Feed
+      // #13 <CR>      Carriage Return
+      ControlCharacter    : Set of AnsiChar = [#0..#13];
+      WrapCharacter       : Set of AnsiChar = [#32, '|', '/', '\', '-', '(', ')', '[', ']'];
 
 // WideChar - Unicode-Char - ASCII-Signs
 Const _0_low                   = $2080;  (* #8320 ₀                           *)
@@ -174,24 +185,33 @@ Const _0_low                   = $2080;  (* #8320 ₀                           
       _Fullwidth_E             = $FF25;  (* #65317 Ｅ                         *)
       _Fullwidth_F             = $FF26;  (* #65318 Ｆ                         *)
 
-Const
-   // _Inp_CursorPos1 = Place the cursor on the first letter
-  _Inp_CursorPos1        = $0100;
-   // _Inp_ExitOnKey  = Exit Function "Input" after every key
-  _Inp_ExitOnKey         = $0200;
-   // _Inp_ClrIfKey   = Clear InputString on first keypressed
-  _Inp_ClrIfKey          = $0400;
-   // _Inp_InsertMode = Insert characters on cursorpos
-  _Inp_InsertMode        = $0800;
-   // _Inp_Password   = Input is Password -> Do not show text
-  _Inp_Password          = $1000;
-  _Inp_Date              = $2000;
-  _Inp_Time              = $4000;
-
-Procedure FillWord(Var Dest; Count:Integer; Value:Word);
-Procedure FillLongword(Var Dest; Count:Integer; Value:Longword);
-
 Type
+  // inpCursorPos1 = Place the cursor on the first letter
+  // inpExitOnKey  = Exit Function "Input" after every key
+  // inpClrIfKey   = Clear InputString on first keypressed
+  // inpInsertMode = Insert characters on cursorpos
+  // inpPassword   = Input is Password -> Do not show text
+  // inpDate       = (+|-) inc/dec date
+  // inpTime       = t.b.c.
+  tInputOption = (inpCursorPos1, inpExitOnKey, inpClrIfKey, inpInsertMode,
+                  inpPassword, inpDate, inpTime);
+  tInputOptions = Set of tInputOption;
+
+  AStr3                   = String[3];
+  AStr4                   = String[4];
+  AChar3                  = Array [0..2] of AnsiChar;
+  AChar4                  = Array [0..3] of AnsiChar;
+  WStr20                  = Array [0..19] of WideChar;
+  WStr30                  = Array [0..29] of WideChar;
+  TDynStr                 = TArray<WideChar>;
+  TDynWord                = TArray<Word>;
+  TDynLongword            = Array of Longword;
+
+  UTF8String              = Type AnsiString(_Codepage_UTF8);
+  CP437String             = Type AnsiString(_Codepage_437);
+  CP850String             = Type AnsiString(_Codepage_850);
+  CP1252String            = Type AnsiString(_Codepage_1252);
+
   TSortValue              = Int64;
   TPlyBoolean             = Boolean;
   // TCodepage            : ConsoleCodepage (Input / Output)
@@ -222,11 +242,16 @@ Type
   // TConsoleScreenBuffer
   TConsoleScreenBuffer    = Array of TCharInfo;
   // TFilesort
-  TFilesort = (NameUp, NameDown, ExtensionUp, ExtensionDown, SizeUp, SizeDown, DateTimeUp,  DateTimeDown);
+  TFilesort               = (NameUp, NameDown, ExtensionUp, ExtensionDown,
+                             SizeUp, SizeDown, DateTimeUp,  DateTimeDown);
 
+Procedure FillWord(Var Dest; Count:Integer; Value:Word);
+Procedure FillLongword(Var Dest; Count:Integer; Value:Longword);
+
+Type
   TFileSizeHelper = Record Helper for TFileSize
   public
-    Function  ToString(Width:Integer=0) : String;
+    Function  ToStringSize(Width:Integer=0) : String;
     Function  ToStringReadable(ShowByte:Boolean=True) : String;
   End;
 
@@ -300,11 +325,11 @@ Type
 
 Type
   TPointHelper = record helper for TPoint
-  private
   public
+    Procedure Clear;
     procedure MaximizeToZero;
     procedure Init(ValueX,ValueY: Longint);
-    function ToStringSize: String;
+    function  ToStringSize: String;
   end;
 
   TRectHelper = record helper for TRect
@@ -436,24 +461,24 @@ Uses
 
 Procedure FillWord(Var Dest; Count:Integer; Value:Word);
 Var DynWord : TDynWord;
+    i       : Integer;
 begin
-  SetLength(DynWord,count);
-  while Count > 0 do
+  SetLength(DynWord,Count);
+  for I := 0 to Count-1 do
   begin
-    Dec(Count);
-    DynWord[Count] := Value;
+    DynWord[i] := Value;
   end;
   Move(DynWord[0],Dest,2*Count);
 end;
 
 Procedure FillLongword(Var Dest; Count:Integer; Value:Longword);
 Var DynLongword : TDynLongword;
+    i           : Integer;
 begin
   SetLength(DynLongword,count);
-  while Count > 0 do
+  for i := 0 to Count-1 do
   begin
-    Dec(Count);
-    DynLongword[Count] := Value;
+    DynLongword[i] := Value;
   end;
   Move(DynLongword[0],Dest,4*Count);
 end;
@@ -461,7 +486,7 @@ end;
 (***************************)
 (***** TFileSizeHelper *****)
 (***************************)
-Function  TFileSizeHelper.ToString(Width:Integer=0) : String;
+Function  TFileSizeHelper.ToStringSize(Width:Integer=0) : String;
 var
   FSize: Int64;
   aString: String;
@@ -767,6 +792,12 @@ end;
 (************************)
 (***** TPointHelper *****)
 (************************)
+Procedure TPointHelper.Clear;
+begin
+  X := 0;
+  Y := 0;
+end;
+
 procedure TPointHelper.MaximizeToZero;
 begin
   X := Max(X,0);

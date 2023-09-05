@@ -2,7 +2,7 @@
 
   Name          : Ply.DateTime.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 31.07.2023
+  Last modified : 01.09.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -11,6 +11,9 @@
 unit Ply.DateTime;
 
 interface
+
+Uses
+  Ply.Types;
 
 {$I Ply.Defines.inc}
 
@@ -61,11 +64,14 @@ Type
     Function Day : Word;
     Function Age : TDateTime;
     Function AgeSeconds : Int64;
+    Function SortValue : TSortValue;
     Function ToDate: String;            // dd.mm.yyyy
     Function ToDateShort: String;       // dd.mm.yy
     Function ToTime: String;            // hh:mm:ss
     Function ToDateTime: String;        // 'dd.mm.yyyy, hh:mm:ss'
+    function ToDateTimeExcel: String;   // 'dd.mm.yyyy hh:mm:ss'
     Function ToAge: String;             // [ddd]d hh:mm:ss
+    Function YYYY : String;             // 'yyyy'
     Function YYYYMMDD : String;         // 'yyyymmdd'
     Function HHMMSS : String;           // 'HHMMSS'
     Function DateTimeFilename : String; // 'YYYYMMDD_HHMMSS'
@@ -401,6 +407,11 @@ begin
   Result := Age.SecondsTotal;
 end;
 
+Function TDateTimeHelper.SortValue : TSortValue;
+begin
+  Result := Age.SecondsTotal;
+end;
+
 Function TDateTimeHelper.ToDate : String; // dd.mm.yyyy
 begin
   Result := FormatDateTime('dd.mm.yyyy', Self);
@@ -419,6 +430,11 @@ end;
 function TDateTimeHelper.ToDateTime: String;
 begin
   Result := ToDate + ', ' + ToTime;
+end;
+
+function TDateTimeHelper.ToDateTimeExcel: String;
+begin
+  Result := ToDate + ' ' + ToTime;
 end;
 
 Function TDateTimeHelper.ToAge : String; // [yyyy]y [ddd]d hh:mm:ss
@@ -445,6 +461,11 @@ begin
     sTime := sTime + Format('%.2d',[SecTotal]);
   end;
   Result := sTime;
+end;
+
+Function TDateTimeHelper.YYYY : String;
+begin
+  Result := System.SysUtils.FormatDateTime('yyyy', Self);
 end;
 
 Function TDateTimeHelper.YYYYMMDD : String;       // 'yyyymmdd'

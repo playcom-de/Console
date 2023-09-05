@@ -76,7 +76,6 @@ Type tPlyTextfile = Object
        Function  Open_Write_Exklusiv(DName:String) : Boolean;
                  (* Create = Delete and Open_Write *)
        Function  Create(DName:String; Codepage:Word=_Codepage_850) : Boolean;
-       Function  Create_Counter(FName:String; Codepage:Word=_Codepage_850) : Boolean;
        Function  Append : Boolean;
        Function  Eof : Boolean;
        Function  Readln(Var Help:String) : Boolean;
@@ -91,11 +90,6 @@ Type tPlyTextfile = Object
 
 Function  TextfileOpenRead(var Textfile:Text; Filename:String) : Boolean;
 Function  TextfileOpenWrite(var Textfile:Text; Filename:String) : Boolean;
-
-function Filename_Replace_Counter(FileName: String; MinCounter: Longint = 1;
-    IncSubDir: Boolean = False; IncZipFiles: Boolean = False): String;
-function Filename_Replace_Counter2(FileName: String; IncSubDir, IncZipFiles:
-    Boolean): String;
 
 implementation
 
@@ -298,215 +292,6 @@ begin
     PlyLastResult := IoResult;
   end;
   Result := (PlyLastResult=0);
-end;
-
-function Filename_Replace_Counter(FileName: String; MinCounter: Longint = 1;
-    IncSubDir: Boolean = False; IncZipFiles: Boolean = False): String;
-Var i                        : Integer;
-    ZPos                     : Integer;
-    FileFound                : Boolean;
-    Counter                  : String;
-    Counter_Name             : String;
-    NewFilename              : String;
-begin
-  NewFilename := FileName;
-  // If a counter is within the FileName
-  if (Pos('?',FileName)>0) then
-  begin
-    MinCounter := Max(0,MinCounter);
-    // Check for '??.???'
-    Counter := '??.???';
-    ZPos    := Pos(Counter,FileName);
-    if (ZPos>0) then
-    begin
-      i := MinCounter;
-      Repeat
-        Counter_Name := IntToStringLZ(i,5); (* -> NNNNN *)
-        Insert('.',Counter_Name,3);  (* 'NNNNN' -> 'NN.NNN' *)
-        NewFilename := ReplaceStr(FileName,Counter,Counter_Name);
-        if (IncSubDir) then
-        begin
-          FileFound := (PlyFileExistsSubDir(NewFilename,True)<>'');
-        end else
-        begin
-          FileFound := FileExists(NewFilename);
-        end;
-        // If you also want to search for ZIP files with the name
-        if not(FileFound) and (IncZipFiles) then
-        begin
-          if (IncSubDir) then
-          begin
-            FileFound := PlyFileExistsSubDir(FilenameReplaceExtension(NewFilename,'ZIP'),True)<>'';
-          end else
-          begin
-            FileFound := FileExists(FilenameReplaceExtension(NewFilename,'ZIP'));
-          end;
-        end;
-        Inc(i);
-      Until (not(FileFound)) or (i>=(Power(10,length(Counter))));
-      // If not found and the counter cannot be incremented further (99.999),
-      // then replace counter with 00.000..ZZ.ZZZ
-      if (FileFound) then
-      begin
-        // Replace counter with 000..ZZZ
-        NewFilename := Filename_Replace_Counter2(FileName,IncSubDir,IncZipFiles);
-      end else
-      begin
-        // Replace Filename with NewFilename to terminate the function because
-        // there are no more ? in the filename
-        FileName := NewFilename;
-      end;
-    end else
-    // Check for '?????' -> '????' -> '???' -> '??' -> '?'
-    begin
-      Counter := '?????';
-      Repeat
-        ZPos := Pos(Counter,FileName);
-        if (ZPos>0) then
-        begin
-          i := MinCounter;
-          Repeat
-            NewFilename := ReplaceStr(FileName,Counter,IntToStringLZ(i,Length(Counter)));
-            if (IncSubDir) then
-            begin
-              FileFound := PlyFileExistsSubDir(NewFilename,True)<>'';
-            end else
-            begin
-              FileFound := PlyFileExists(NewFilename);
-            end;
-            // If you also want to search for ZIP files with the name
-            if not(FileFound) and (IncZipFiles) then
-            begin
-              if (IncSubDir) then
-              begin
-                FileFound := PlyFileExistsSubDir(FilenameReplaceExtension(NewFilename,'ZIP'),True)<>'';
-              end else
-              begin
-                FileFound := PlyFileExists(FilenameReplaceExtension(NewFilename,'ZIP'));
-              end;
-            end;
-            Inc(i);
-          Until (not(FileFound)) or (i>=(Power(10,length(Counter))));
-          // If not found and the counter cannot be incremented further
-          // (9, 99, 999, 9999, 99999), then replace counter with 000..ZZZ
-          if (FileFound) then
-          begin
-            // Replace counter with 000..ZZZ
-            NewFilename := Filename_Replace_Counter2(FileName,IncSubDir,IncZipFiles);
-          end else
-          begin
-            // Replace filename with NewFilename to terminate the function
-            // because there are no more ? in the filename
-            FileName := NewFilename;
-          end;
-        end else
-        begin
-          Delete(Counter,1,1); (* ????? -> ???? -> ??? -> ?? -> ? *)
-        end;
-      Until (Counter='') or (ZPos>0);
-    end;
-  end;
-  Result := NewFilename;
-end;
-
-function Filename_Replace_Counter2(FileName: String; IncSubDir,
-    IncZipFiles:Boolean): String;
-Var i                        : Longint;
-    ZPos                     : Byte;
-    FileFound                : Boolean;
-    Counter                  : String;
-    Counter_Name             : String;
-    NewFilename              : String;
-begin
-  NewFilename := FileName;
-  // Only if there is a ? in the filename at all
-  if (Pos('?',FileName)>0) then
-  begin
-    (* Check for '??.???' *)
-    Counter := '??.???';
-    ZPos    := Pos(Counter,FileName);
-    if (ZPos>0) then
-    begin
-      i := 1;
-      Repeat
-        Counter_Name := IntToCounterFilename(i,5);
-        Insert('.',Counter_Name,3);  (* 'ZZZZZ' -> 'ZZ.ZZZ' *)
-        NewFilename := ReplaceStr(FileName,Counter,Counter_Name);
-        if (IncSubDir) then
-        begin
-          FileFound := PlyFileExistsSubDir(NewFilename,True)<>'';
-        end else
-        begin
-          FileFound := PlyFileExists(NewFilename);
-        end;
-        // If you also want to search for ZIP files with the name
-        if not(FileFound) and (IncZipFiles) then
-        begin
-          if (IncSubDir) then
-          begin
-            FileFound := PlyFileExistsSubDir(FilenameReplaceExtension(NewFilename,'ZIP'),True)<>'';
-          end else
-          begin
-            FileFound := PlyFileExists(FilenameReplaceExtension(NewFilename,'ZIP'));
-          end;
-        end;
-        Inc(i);
-      Until (not(FileFound)) or (i>=(Power(36,length(Counter))));
-      if (FileFound) then
-      begin
-        // ToDo: Make an entry in the LogFile
-      end else
-      begin
-        FileName := NewFilename;
-      end;
-    end else
-    (* Check for '?????' -> '????' -> '???' -> '??' -> '?' *)
-    begin
-      Counter   := '?????';
-      Repeat
-        ZPos := Pos(Counter,FileName);
-        if (ZPos>0) then
-        begin
-          i := 1;
-          Repeat
-            NewFilename := ReplaceStr(FileName,Counter,IntToCounterFilename(i,Length(Counter)));
-            if (IncSubDir) then
-            begin
-              FileFound := PlyFileExistsSubDir(NewFilename,True)<>'';
-            end else
-            begin
-              FileFound := PlyFileExists(NewFilename);
-            end;
-            // If you also want to search for ZIP files with the name
-            if not(FileFound) and (IncZipFiles) then
-            begin
-              if (IncSubDir) then
-              begin
-                FileFound := PlyFileExistsSubDir(FilenameReplaceExtension(NewFilename,'ZIP'),True)<>'';
-              end else
-              begin
-                FileFound := PlyFileExists(FilenameReplaceExtension(NewFilename,'ZIP'));
-              end;
-            end;
-            Inc(i);
-          Until (not(FileFound)) or (i>=(Power(36,length(Counter))));
-          if (FileFound) then
-          begin
-            // ToDo: Make an entry in the LogFile
-          end else
-          begin
-            // Replace Filename with NewFilename to terminate the function
-            // because there are no more ? in the filename
-            FileName := NewFilename;
-          end;
-        end else
-        begin
-          Delete(Counter,1,1); (* ????? -> ???? -> ??? -> ?? -> ? *)
-        end;
-      Until (Counter='') or (ZPos>0);
-    end;
-  end;
-  Result := NewFilename;
 end;
 
 (*******************************)
@@ -1033,32 +818,6 @@ begin
       Result := Open_Write(DName,Codepage=_Codepage_UTF8);
     end;
   end else Result := False;
-end;
-
-Function  tPlyTextfile.Create_Counter(FName:String; Codepage:Word=_Codepage_850) : Boolean;
-Var
-  Directory : String;
-begin
-  Result := False;
-  if (FName<>'') then
-  begin
-    Directory := ExtractFilePath(FName);
-    (* Delete invalid Characters in Filename *)
-    FName := Directory + Filename_Make_valid(ExtractFileName(FName));
-    if (Directory<>'') then
-    begin
-      ForceDirectories(Directory);
-    end;
-    (* If a counter is within the filename "???" -> Replace it *)
-    FName  := Filename_Replace_Counter(FName,0,False,False);
-    if (PlyFileDelete(FName)) then
-    begin
-      if (Open_Write(FName,(Codepage=_Codepage_UTF8))) then
-      begin
-        Result := True;
-      end;
-    end;
-  end;
 end;
 
 Function  tPlyTextfile.Append : Boolean;

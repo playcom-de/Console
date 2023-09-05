@@ -2,7 +2,7 @@
 
   Name          : Ply.SysUtils.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 01.07.2023
+  Last modified : 04.09.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -53,9 +53,9 @@ Function  PlyDirectoryExists(FilePathWildCards:String; Out aSearchRec:tSearchrec
 Function  PlyDirectoryExists(FilePathWildCards:String; ResultWithPath:Boolean) : String; Overload;
 
 Function  PlyFileCount(FileNameWildCards:String; IncludeSubDir:Boolean=False) : Longint;
-Function  PlyFileGetDaTi(Filename:String) : Longint;
+
 Function  PlyFileGetDateTime(Filename:String) : TDateTime;
-Procedure PlyFileSetDaTi(Pfad:String; DaTi:Longint);
+Procedure PlyFileSetDateTime(Filename:String; Const aDateTime:tDateTime);
 
           // Return first found (FilePath & FileName)
 Function  PlyGetFilename(FileNameWildCards:String) : String;
@@ -85,16 +85,22 @@ Function  PlyFilesDeleteBefore(FileNameWildCards:String; BeforeDateTime:TDateTim
 Function  PlyFilesDeleteAgeDays(FileNameWildCards:String; AgeDays:Longint) : Longint;
 Function  PlyFilesDeleteAgeMinutes(FileNameWildCards:String; AgeMinutes:Longint) : Longint;
 
-Type TWindowsCodepages = record
-     strict private
-       class threadvar FList: TStrings;
-       class function EnumCodePagesProc(CodePage:PWideChar) : Boolean; static; stdcall;
-       class function GetCodepageName(Codepage:Cardinal) : String; static;
-     public
-       class function GetInstalled(Const CodePageList:TStrings) : Boolean; static;
-       class function GetSupported(Const CodePageList:TStrings) : Boolean; static;
-       class function GetName(CodePage: Cardinal) : String; static;
-     end;
+Type
+  TWindowsCodepages = record
+  strict private
+    class threadvar FList: TStrings;
+    class function EnumCodePagesProc(CodePage:PWideChar) : Boolean; static; stdcall;
+    class function GetCodepageName(Codepage:Cardinal) : String; static;
+  public
+    class function GetInstalled(Const CodePageList:TStrings) : Boolean; static;
+    class function GetSupported(Const CodePageList:TStrings) : Boolean; static;
+    class function GetName(CodePage: Cardinal) : String; static;
+  end;
+
+  TSearchRecHelper = Record Helper for TSearchRec
+  Public
+    Procedure Clear;
+  End;
 
 Type tDirInfo                = Record
      Name                    : String;
@@ -123,8 +129,9 @@ Type tDirInfo                = Record
      Function  ToDate : String;
                // ToTime: 'hh:mm:ss'
      Function  ToTime : String;
-     Function  SubDir : String;    // only filepath if path is included in name
-     Function  FileName : String;  // only filename if path is included in name
+     Function  SubDir : String;       // filepath if path is included in name
+     Function  FileName : String;     // filename if path is included in name
+     Function  FileNameName : String; // filename without path & extension
      Function  Extension : String;
      Function  ReadOnly : Boolean;
      Function  Hidden : Boolean;
@@ -197,7 +204,7 @@ Type tDirInfos = Class(tObject)
                  // Delete: Delete Filename form DirInfos if present
        Function  Delete(DeleteFileName:String; All:Boolean=False) : Boolean; Overload;
                  // Delete: Delete all Filenames in Strings form DirInfos
-       Procedure Delete(Var Strings:TStringList); Overload;
+       Procedure Delete(Var Strings:TStrings); Overload;
                  // DeleteNotRecSize: Deletes all entries with a different RecSize from DirInfos
        Procedure DeleteNotRecSize(RecSize:Longint);
                  // DeleteFilter: Deletes all entries that match FilterFilename
@@ -263,7 +270,7 @@ Uses
 
 Function  PlyFindFirst(Path:String; Attr:TPlyFileAttribute; var aSearchRec:tSearchRec) : Boolean;
 begin
-  FillChar(aSearchRec,sizeof(aSearchRec),#0);
+  aSearchRec.Clear;
   Path := UpperCase(Path);
   {$IFDEF FPC}
     findfirst(Path,attr,aSearchRec);
@@ -392,12 +399,7 @@ begin
   if (FileExists(FileName)) then
   begin
     {$WARNINGS OFF}
-    {$IFDEF FPC}
-      Assign(f, Umlaute_DosWin(FileName));
-      GetFAttr(F, CurAttr);
-    {$ELSE}
-      OldAttr := FileGetAttr(FileName);
-    {$ENDIF}
+    OldAttr := FileGetAttr(FileName);
     NewAttr := OldAttr;
     // Only these 4 attributes of a file can be changed
     DeleteAttrIfSet(NewAttr,DelAttr,faReadOnly);
@@ -407,13 +409,7 @@ begin
     // If at least 1 attribute is to be changed
     if (OldAttr<>NewAttr) then
     begin
-      {$IFDEF FPC}
-        SetFAttr(F, CurAttr);
-        PlyLastError := DosError;
-        Result := (PlyLastError=0);
-      {$ELSE}
-        Result := (FileSetAttr(FileName,NewAttr)=0);
-      {$ENDIF}
+      Result := (FileSetAttr(FileName,NewAttr)=0);
     end else
     begin
       Result := True;
@@ -444,7 +440,6 @@ end;
 Function  PlyFileExists(FileNameWildCards:String; Out aSearchRec:tSearchrec) : Boolean;
 begin
   Result := False;
-  FillChar(aSearchRec,Sizeof(aSearchRec),#0);
   FileNameWildCards := ExcludeTrailingPathDelimiter(FileNameWildCards);
   if (PlyFindFirst(FileNameWildCards,faFile,aSearchRec)) then
   begin
@@ -599,20 +594,6 @@ begin
   Result := Counter;
 end;
 
-Function  PlyFileGetDaTi(Filename:String) : Longint;
-Var aSearchRec : tSearchrec;
-begin
-  if (PlyFileExists(Filename,aSearchRec)) then
-  begin
-    {$WARNINGS OFF}
-    Result := aSearchRec.Time;
-    {$WARNINGS ON}
-  end else
-  begin
-    Result := -1;
-  end;
-end;
-
 Function  PlyFileGetDateTime(Filename:String) : TDateTime;
 Var aSearchRec : tSearchrec;
 begin
@@ -625,30 +606,19 @@ begin
   end;
 end;
 
-Procedure PlyFileSetDaTi(Pfad:String; DaTi:Longint);
-{$IFDEF FPC}
-Var f : File;
-{$ELSE}
+Procedure PlyFileSetDateTime(Filename:String; Const aDateTime:tDateTime);
 Var FileHandle : Longint;
-{$ENDIF}
 begin
-  if (FileExists(Pfad)) then
+  if (PlyFileExists(Filename)) then
   begin
-    {$IFDEF FPC}
-      System.Assign(f, Umlaute_DosWin(Pfad));
-      System.Reset(f);
-      SetFTime(f,DaTi);
-      System.Close(f);
-    {$ELSE}
-      FileHandle := FileOpen(Pfad, fmOpenReadWrite or fmShareDenyWrite);
-      if FileHandle > 0 then
-      begin
-        {$WARNINGS OFF}
-        FileSetDate(FileHandle, DaTi);
-        {$WARNINGS ON}
-        FileClose(FileHandle);
-      end;
-    {$ENDIF}
+    FileHandle := FileOpen(Filename, fmOpenReadWrite or fmShareDenyWrite);
+    if FileHandle > 0 then
+    begin
+      {$WARNINGS OFF}
+      FileSetDate(FileHandle, DateTimeToFileDate(aDateTime));
+      {$WARNINGS ON}
+      FileClose(FileHandle);
+    end;
   end;
 end;
 
@@ -752,31 +722,16 @@ begin
 end;
 
 Function  PlyFileRename(OldFilename,NewFilename:String) : Boolean;
-{$IFDEF FPC}
-  Var Datei : File;
-{$ENDIF}
 begin
-  {$IFDEF FPC}
-    if (PlyFileExists(OldFilename)) then
-    begin
-      Assign(Datei,Umlaute_DosWin(OldFilename));
-      {$I-}
-      Rename(Datei,Umlaute_DosWin(NewFilename));
-      {$I+}
-      PlyLastResult := IOResult;
-    end else PlyLastResult := 2; (* Datei nicht gefunden *)
-    Result := (PlyLastResult=0);
-  {$ELSE}
-    if (System.SysUtils.RenameFile(OldFilename,NewFilename)) then
-    begin
-      Result   := True;
-      PlyLastResult := 0;
-    end else
-    begin
-      Result := False;
-      PlyLastResult := GetLastError;
-    end;
-  {$ENDIF}
+  if (System.SysUtils.RenameFile(OldFilename,NewFilename)) then
+  begin
+    Result   := True;
+    PlyLastResult := 0;
+  end else
+  begin
+    Result := False;
+    PlyLastResult := GetLastError;
+  end;
 end;
 
 // Creates directory including subdirectories
@@ -976,11 +931,7 @@ end;
 
 Function  PlyGetFileNameFromFile(var aFile) : String;
 begin
-  {$IFDEF FPC}
-    Result := StrPas(TextRec(aFile).Name);
-  {$ELSE}
-    Result := StrPas(TTextRec(aFile).Name);
-  {$ENDIF}
+  Result := StrPas(TTextRec(aFile).Name);
 end;
 
 Function  PlyFileDelete(Filename:String) : Boolean;
@@ -989,23 +940,14 @@ begin
   Result := False;
   if (System.SysUtils.FileExists(Filename)) then
   begin
-    {$IFDEF FPC}
-    AssignFile(Datei,Umlaute_DosWin(Filename));
-      try
-        Erase(Datei);
-        PlyLastResult := 0;
-      except
-        on E: EInOutError do
-        begin
-          PlyLastResult := E.ErrorCode;
-        end;
-      end;
-    {$ELSE}
-      AssignFile(Datei,Filename);
+    AssignFile(Datei,Filename);
+    Try
       Erase(Datei);
       if (FileExists(Filename)) then PlyLastResult := 5
                                 else PlyLastResult := 0;
-    {$ENDIF}
+    Except
+      PlyLastResult := 5;
+    End;
     if (PlyLastResult=0) then Result := True;
   end else Result := True;
 end;
@@ -1162,6 +1104,19 @@ begin
   Result := GetCodepageName(CodePage);
 end;
 
+Procedure TSearchRecHelper.Clear;
+begin
+  {$WARNINGS OFF}
+  Time := 0;
+  Size := 0;
+  Attr := 0;
+  Name := '';
+  ExcludeAttr := 0;
+  FindHandle  := 0;
+  FillChar(FindData,sizeof(FindData),#0);
+  {$WARNINGS ON}
+end;
+
 (********************)
 (***** tDirInfo *****)
 (********************)
@@ -1264,7 +1219,7 @@ begin
     if (Name='..')
        then Result := '   UP--DIR'
        else Result := '   SUB-DIR';
-  end else Result := Size.ToString(10);
+  end else Result := Size.ToStringSize(10);
   Result := Result + WideChar(_Frame_single_vert) + DateTime.ToDateShort
                    + WideChar(_Frame_single_vert) + DateTime.ToTime;
 end;
@@ -1319,6 +1274,11 @@ begin
   Result := ExtractFileName(Name);
 end;
 
+Function  tDirInfo.FileNameName : String;
+begin
+  Result := PlyFileNameName(Name);
+end;
+
 Function  tDirInfo.Extension : String;
 begin
   Result := ExtractFileExt(Name);
@@ -1358,7 +1318,7 @@ begin
   begin
     if (aDirInfo.DateTime=DateTime) then
     begin
-      if (AnsiCompareText(aDirInfo.Name,Name)=0) then Result := True;
+      if (CompareText(aDirInfo.Name,Name)=0) then Result := True;
     end;
   end;
 end;
@@ -1533,22 +1493,25 @@ Var i : Integer;
 begin
   Result := False;
   DeleteFileName := DeleteFileName.ToUpper;
-  for I := High(DInfos) downto 0 do
+  if Count>0 then
   begin
-    if (AnsiCompareText(DInfos[i].Name,DeleteFileName)=0) then
+    for I := High(DInfos) downto 0 do
     begin
-      {$IFDEF DELPHI10UP}
-      System.Delete(DInfos,i,1);
-      {$ELSE}
-      DelDirInfo(i);
-      {$ENDIF DELPHI10UP}
-      Result := True;
-      if not(All) then Exit;
+      if (CompareText(DInfos[i].Name,DeleteFileName)=0) then
+      begin
+        {$IFDEF DELPHI10UP}
+        System.Delete(DInfos,i,1);
+        {$ELSE}
+        DelDirInfo(i);
+        {$ENDIF DELPHI10UP}
+        Result := True;
+        if not(All) then Exit;
+      end;
     end;
   end;
 end;
 
-Procedure tDirInfos.Delete(Var Strings:TStringList);
+Procedure tDirInfos.Delete(Var Strings:TStrings);
 Var i : integer;
 begin
   for i := 0 to Strings.Count-1 do
@@ -1723,10 +1686,10 @@ begin
       if (a.SubDir<>'')   and (b.SubDir='')    then Result := 1  else
       begin
         // Sort files by parameter
-        if FileSort=NameUp        then Result := AnsiCompareText(A.Name, B.Name) else
-        if FileSort=NameDown      then Result := AnsiCompareText(B.Name, A.Name) else
-        if FileSort=ExtensionUp   then Result := AnsiCompareText(A.Extension, B.Extension) else
-        if FileSort=ExtensionDown then Result := AnsiCompareText(B.Extension, A.Extension) else
+        if FileSort=NameUp        then Result := CompareText(A.Name, B.Name) else
+        if FileSort=NameDown      then Result := CompareText(B.Name, A.Name) else
+        if FileSort=ExtensionUp   then Result := CompareText(A.Extension, B.Extension) else
+        if FileSort=ExtensionDown then Result := CompareText(B.Extension, A.Extension) else
         if FileSort=SizeUp        then Result := A.Size - B.Size                 else
         if FileSort=SizeDown      then Result := B.Size - A.Size                 else
         if FileSort=DateTimeUp    then Result := A.DateTime.Compare(B.DateTime)  else
@@ -1747,21 +1710,24 @@ begin
   Value.Clear;
   Filename     := Filename.ToUpper;
   Result       := False;
-  for i := High(DInfos) downto 0 do
+  if (Count>0) then
   begin
-    if (AnsiCompareText(DInfos[i].Name,Filename)=0) then
+    for i := High(DInfos) downto 0 do
     begin
-      Result := True;
-      Value  := DInfos[i];
-      if (eDelete) then
+      if (CompareText(DInfos[i].Name,Filename)=0) then
       begin
-        {$IFDEF DELPHI10UP}
-        System.Delete(DInfos,i,1);
-        {$ELSE}
-        DelDirInfo(i);
-        {$ENDIF DELPHI10UP}
+        Result := True;
+        Value  := DInfos[i];
+        if (eDelete) then
+        begin
+          {$IFDEF DELPHI10UP}
+          System.Delete(DInfos,i,1);
+          {$ELSE}
+          DelDirInfo(i);
+          {$ENDIF DELPHI10UP}
+        end;
+        Exit;
       end;
-      Exit;
     end;
   end;
 end;
@@ -2070,6 +2036,31 @@ begin
     Result := Now - (n1/86400);
   end;
 end;
+
+//function GetWriteLongAddress: Pointer;
+//asm
+//  {$ifdef CPU64}
+//    mov rax,offset System.@WriteLong
+//  {$else}
+//    mov eax,offset System.@WriteLong
+//  {$endif}
+//end;
+//
+//function GetWriteStringAddress: Pointer;
+//asm
+//  {$ifdef CPU64}
+//    mov rax,offset System.@WriteString
+//  {$else}
+//    mov eax,offset System.@WriteString
+//  {$endif}
+//end;
+
+//function WriteLongFix(var t: TTextRec; val, width: Integer): Pointer;
+//var S: ShortString;
+//begin
+//  Str(val:width, S);
+//  Result := System.WriteString(t, S, width);
+//end;
 
 function tTimecount.GetMilliseconds: Extended;
 begin

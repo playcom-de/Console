@@ -124,14 +124,13 @@ begin
       GotoXY(21,5+FieldNumber);
       if (FieldNumber=0) then
       begin
-        Key := (_Inp_CursorPos1);
-        aString := InputString(aString,50,Key);
+        aString := InputString(aString,50,Key,[inpCursorPos1]);
         UStr := aString;
       end else
       if (FieldNumber=1) then
       begin
-        Key := (_Inp_CursorPos1 or _Inp_InsertMode);
-        aLongString := InputString(aLongString,70,1000,Black,LightGray,Key,1,24);
+        aLongString := InputString(aLongString,70,1000,Black,LightGray,Key
+                         ,[inpCursorPos1, inpInsertMode],1,24);
         UStr := aLongString;
       end else
       if (FieldNumber=2) then
@@ -141,7 +140,7 @@ begin
       end else
       if (FieldNumber=3) then
       begin
-        aDouble  := InputDouble(aDouble,40,Key,0,4,',','.');
+        aDouble  := InputDouble(aDouble,40,Key,[],4,',','.');
         UStr := DoubleToString(aDouble,0,4,',','.');
       end;
 
