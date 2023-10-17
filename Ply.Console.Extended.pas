@@ -322,32 +322,34 @@ Uses
   Vcl.Clipbrd,
   WinAPI.Windows;
 
+Type tScreenSaveFile = tPlyFile;
+
 Var AlternateScreenSaveFilename : String = '';
 
 Type TScreenSaveIndex = Record
-       Index            : Integer;
-       DateTime         : TDateTime;
-       UserId           : Integer;
-       Username         : WStr30;
-       ComputerId       : Integer;
-       Computername     : WStr30;
+       Index          : Integer;
+       DateTime       : TDateTime;
+       UserId         : Integer;
+       Username       : WStr30;
+       ComputerId     : Integer;
+       Computername   : WStr30;
        // Size of Console.Window
-       iScreenSize      : TConsoleWindowPoint;
+       iScreenSize    : TConsoleWindowPoint;
        // WindSize: Position of the active crt.window within the console.window
-       iWindSize        : TPlyConWinSize;
+       iWindSize      : TPlyConWinSize;
        // CursorPos: Position of the cursor within the active crt.window
-       iCursorPos       : TConsoleWindowPoint;
+       iCursorPos     : TConsoleWindowPoint;
        // TextAttr: Current TColor & BColor when saving screen
-       iTextAttr        : Word;
+       iTextAttr      : Word;
        // FPosData: FilePos of ScreenData in ScreenSaveData-File
-       FPosData         : Integer;
+       FPosData       : Integer;
        Procedure Clr;
        Procedure Init(Var ScreenSave:tScreenSave;
                    eUsername:String=''; eUserId:Integer=-1;
                    eComputername:String=''; eComputerId:Integer=-1);
        Procedure GetSettings(Var ScreenSave:tScreenSave);
        Function  Filename : String;
-       Function  Open(var aFile:tPlyFile) : Boolean;
+       Function  Open(var aFile:tScreenSaveFile) : Boolean;
        Function  Load(aIndex:Integer) : Boolean;
        Function  Filesize : Integer;
        Function  SelectString : TConsoleString;
@@ -359,7 +361,7 @@ Type TScreenSaveData  = Record
        ScreenData : TScreenData;
        Private
          Function  Filename : String;
-         Function  Open(Var aFile:tPlyFile) : Boolean;
+         Function  Open(Var aFile:tScreenSaveFile) : Boolean;
        Public
          Procedure InitData(Var ScreenSave:tScreenSave);
          Function  WriteData(Var FPos:Integer) : Boolean;
@@ -397,7 +399,7 @@ Function  TScreenSaveHelper.SaveToFile(Const Index:Integer=-1;
             eComputername:String=''; eComputerId:Integer=-1) : Integer;
 Var
   ScreenSaveIndex : TScreenSaveIndex;
-  IndexFile : tPlyFile;
+  IndexFile : tScreenSaveFile;
   ScreenSaveData : TScreenSaveData;
 begin
   Result := -1;
@@ -462,7 +464,7 @@ end;
 Function  TScreenSaveHelper.SelectFromFile : Boolean;
 Var
   ScreenSaveIndex : TScreenSaveIndex;
-  aFile : tPlyFile;
+  aFile : tScreenSaveFile;
   SelectScreen : tSelectItems;
   FPos : Longint;
   Key : Word;
@@ -571,7 +573,7 @@ begin
      else Result := PlyProgDataPath + 'ScreenSave.ScrIdx';
 end;
 
-Function  TScreenSaveIndex.Open(Var aFile:tPlyFile) : Boolean;
+Function  TScreenSaveIndex.Open(Var aFile:tScreenSaveFile) : Boolean;
 Var FName : String;
     DirInfo : TDirInfo;
 begin
@@ -584,7 +586,7 @@ begin
 end;
 
 Function  TScreenSaveIndex.Load(aIndex:Integer) : Boolean;
-Var aFile : tPlyFile;
+Var aFile : tScreenSaveFile;
 begin
   Result := False;
   if (Open(aFile)) then
@@ -595,7 +597,7 @@ begin
 end;
 
 Function  TScreenSaveIndex.Filesize : Integer;
-Var aFile : tPlyFile;
+Var aFile : tScreenSaveFile;
 begin
   Result := 0;
   if (FileExists(Filename)) then
@@ -634,7 +636,7 @@ begin
      else Result := PlyProgDataPath + 'ScreenSave.ScrDat';
 end;
 
-Function  TScreenSaveData.Open(Var aFile:tPlyFile) : Boolean;
+Function  TScreenSaveData.Open(Var aFile:tScreenSaveFile) : Boolean;
 begin
   Open := aFile.Open(Filename,1);
 end;
@@ -647,7 +649,7 @@ end;
 
 Function  TScreenSaveData.WriteData(Var FPos:Integer) : Boolean;
 Var
-  aFile : tPlyFile;
+  aFile : tScreenSaveFile;
   WrittenRec : tFileRecCount;
 begin
   Result := False;
@@ -668,7 +670,7 @@ end;
 
 Function  TScreenSaveData.ReadData(Const ScreenSaveIndex:tScreenSaveIndex) : Boolean;
 Var
-  aFile : tPlyFile;
+  aFile : tScreenSaveFile;
   ReadRec : tFileRecCount;
 begin
   Result := False;
@@ -876,7 +878,7 @@ begin
 end;
 
 Function  TConsoleLocationComputerHelper.LoadFromFile : Boolean;
-Var aFile : tPlyFile;
+Var aFile : tScreenSaveFile;
 begin
   Result := False;
   Init;
@@ -891,7 +893,7 @@ begin
 end;
 
 Function  TConsoleLocationComputerHelper.SaveToFile : Boolean;
-Var aFile : tPlyFile;
+Var aFile : tScreenSaveFile;
 begin
   Result := False;
   if (aFile.Open(Filename,Sizeof(Self))) then
@@ -920,7 +922,7 @@ begin
 end;
 
 Function  TConsoleLocationUserHelper.LoadFromFile : Boolean;
-Var aFile : tPlyFile;
+Var aFile : tScreenSaveFile;
 begin
   Result := False;
   Init;
@@ -935,7 +937,7 @@ begin
 end;
 
 Function  TConsoleLocationUserHelper.SaveToFile : Boolean;
-Var aFile : tPlyFile;
+Var aFile : tScreenSaveFile;
 begin
   Result := False;
   if (aFile.Open(Filename,Sizeof(Self))) then
@@ -1743,7 +1745,7 @@ Function  InputDouble(iDouble:Double; iLength:Integer; Var Key:Word;
             ThousandSeparator:WideChar='?') : Double;
 begin
   Result := StringToDouble(InputString(DoubleToString(iDouble,0,Comma
-              ,DecimalSeparator,ThousandSeparator),iLength,Key),ThousandSeparator);
+              ,DecimalSeparator,ThousandSeparator),iLength,Key,Options),ThousandSeparator);
 end;
 
 Function  InputDouble(x,y:Integer; iDouble:Double; iLength:Integer;

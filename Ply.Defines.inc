@@ -12,6 +12,7 @@
   {$A+} // Record field alignment     : enabled
   {$X+} // Extended Syntax            : enabled
   {$H+} // Long strings               : enabled
+  {$I+} // IO-Checks                  : enabled
   {$J-} // Assignable typed constants : disabled
   {$O+} // Optimization               : enabled
   {$P-} // Open parameters            : disabled

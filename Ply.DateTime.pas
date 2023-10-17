@@ -54,20 +54,27 @@ Type
     Procedure AddYears(CountYears:Longint);
     Procedure AddMilliSeconds(eMilliSeconds:Int64);
     Function  Compare(aDateTime:TDateTime) : Integer;
+    Function  Equal(aDateTime:TDateTime) : Boolean;
 
     Function SecondsTotal : Int64;
     Function MilliSeconds1970 : Int64;
     Function AsDate : TDateTime;        // Date-Value
     Function AsTime : TDateTime;        // Time-Value
-    Function Year : Word;
-    Function Month : Word;
-    Function Day : Word;
+    Function AsFileDate : Longint;      // File-TimeStamp
+    Function Year : Word;               // 1..9999
+    Function Month : Word;              // 1..12
+    Function Day : Word;                // 1..31
+    Function Hour : Word;               // 0..23
+    Function Minute : Word;             // 0..59
+    Function Second : Word;             // 0..59
+    Function Milliseconds : Word;
     Function Age : TDateTime;
     Function AgeSeconds : Int64;
     Function SortValue : TSortValue;
     Function ToDate: String;            // dd.mm.yyyy
     Function ToDateShort: String;       // dd.mm.yy
     Function ToTime: String;            // hh:mm:ss
+    function ToTimeShort: String;       // hh:mm
     Function ToDateTime: String;        // 'dd.mm.yyyy, hh:mm:ss'
     function ToDateTimeExcel: String;   // 'dd.mm.yyyy hh:mm:ss'
     Function ToAge: String;             // [ddd]d hh:mm:ss
@@ -94,6 +101,7 @@ implementation
 Uses
   Ply.Math,
   Ply.StrUtils,
+  Winapi.Windows,
   System.Math,
   System.DateUtils,
   System.SysUtils;
@@ -359,6 +367,13 @@ begin
                       else Result := 0;
 end;
 
+Function TDateTimeHelper.Equal(aDateTime:TDateTime) : Boolean;
+Var DifSeconds : Int64;
+begin
+  DifSeconds := (SecondsTotal-aDateTime.SecondsTotal);
+  Result := (DifSeconds>=-1) and (DifSeconds<=1);
+end;
+
 Function TDateTimeHelper.SecondsTotal : Int64;
 begin
   SecondsTotal := Round(Self * SecondsPerDay);
@@ -380,6 +395,26 @@ begin
   Result := Frac(Self);
 end;
 
+Function TDateTimeHelper.AsFileDate : Longint;      // File-TimeStamp
+Var hYear : Longint;
+    Today : TDateTime;
+begin
+  // Date from 01.01.1980 to 31.12.2107 = 128 years
+  // Time accurate to 2 seconds, i.e. 0,2,4,6,...
+  (* Sekunden *)
+  Result := Round(Second / 2)   // Seconds
+          +  Minute * 32        // Minutes
+          +  Hour   * 2048      // Hours
+          +  Day    * 65536     // Days
+          +  Month  * 2097152;  // Months
+  hYear := Year-1980;
+  if (hYear<=63) then Result := Result + (hYear*33554432) else
+  begin
+    Today.InitNow;
+    Result := Result + ((ToDay.Year-1980) * 33554432);
+  end;
+end;
+
 Function TDateTimeHelper.Year : Word;
 begin
   Result := System.DateUtils.YearOf(Self);
@@ -393,6 +428,26 @@ end;
 Function TDateTimeHelper.Day : Word;
 begin
   Result := System.DateUtils.DayOf(Self);
+end;
+
+Function  TDateTimeHelper.Hour : Word;
+begin
+  Result := Trunc(HoursPerDay * AsTime);
+end;
+
+Function  TDateTimeHelper.Minute : Word;
+begin
+  Result := Trunc(60 * Frac(HoursPerDay * AsTime));
+end;
+
+Function  TDateTimeHelper.Second : Word;
+begin
+  Result := Trunc(60 * Frac(MinutesPerDay * AsTime));
+end;
+
+Function  TDateTimeHelper.Milliseconds : Word;
+begin
+  Result := Trunc(1000 * Frac(SecondsPerDay * AsTime));
 end;
 
 Function TDateTimeHelper.Age : TDateTime;
@@ -425,6 +480,11 @@ end;
 function TDateTimeHelper.ToTime: String;
 begin
   Result := FormatDateTime('hh:nn:ss', Self);
+end;
+
+function TDateTimeHelper.ToTimeShort: String;
+begin
+  Result := FormatDateTime('hh:nn', Self);
 end;
 
 function TDateTimeHelper.ToDateTime: String;

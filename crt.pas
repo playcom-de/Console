@@ -323,6 +323,7 @@ procedure WriteString(Const cString:TConsoleString); Overload;
 Procedure WritelnString(Const sString:ShortString); Overload;
 Procedure WritelnString(Const aString:AnsiString); Overload;
 Procedure WritelnString(Const uString:UnicodeString); Overload;
+Procedure WritelnString(TColor:Byte; Const uString:UnicodeString); Overload;
 Procedure WritelnString(Const cString:TConsoleString); Overload;
 
 Function  InvertTextAttr(aTextAttr:tTextAttr) : TTextAttr;
@@ -385,6 +386,7 @@ implementation
 uses
   Ply.DateTime,
   Ply.Math,
+  Ply.Patches,
   Ply.StrUtils,
   System.SysUtils,
   System.Math,
@@ -554,6 +556,34 @@ procedure nosound;
 begin
 end;
 
+procedure InsLine;
+var ScrollRectangle  : TSmallRect;
+    ClipRectangle    : TSmallRect;
+    DestinationCoord : TCoord;
+    FillChar         : TCharInfo;
+begin
+  FillChar.UnicodeChar   := #32;
+  FillChar.Attributes    := TextAttr;
+
+  ScrollRectangle.Top    := CursorPos.Y - 1;
+  ScrollRectangle.Left   := WindSize.Left;
+  ScrollRectangle.Right  := WindSize.Right;
+  ScrollRectangle.Bottom := WindSize.Bottom + 1;
+
+  DestinationCoord.X     := WindSize.Left;
+  DestinationCoord.Y     := CursorPos.Y;
+  ClipRectangle          := ScrollRectangle;
+  ClipRectangle.Bottom   := WindSize.Bottom - 1;
+
+  {$IFDEF FPC}
+    ScrollConsoleScreenBuffer(ConHandleStdOut
+      ,ScrollRectangle,ClipRectangle,DestinationCoord,FillChar);
+  {$ELSE}
+    ScrollConsoleScreenBuffer(ConHandleStdOut
+      ,@ScrollRectangle,@ClipRectangle,DestinationCoord,FillChar);
+  {$ENDIF FPC}
+end;
+
 procedure DelLine(y:Integer);
 var ScrollRectangle    : TSmallRect;
     ClipRectangle      : TSmallRect;
@@ -596,34 +626,6 @@ begin
   begin
     gotoxy(1,y); clreol;
   end;
-end;
-
-procedure InsLine;
-var ScrollRectangle  : TSmallRect;
-    ClipRectangle    : TSmallRect;
-    DestinationCoord : TCoord;
-    FillChar         : TCharInfo;
-begin
-  FillChar.UnicodeChar   := #32;
-  FillChar.Attributes    := TextAttr;
-
-  ScrollRectangle.Top    := CursorPos.Y - 1;
-  ScrollRectangle.Left   := WindSize.Left;
-  ScrollRectangle.Right  := WindSize.Right;
-  ScrollRectangle.Bottom := WindSize.Bottom + 1;
-
-  DestinationCoord.X     := WindSize.Left;
-  DestinationCoord.Y     := CursorPos.Y;
-  ClipRectangle          := ScrollRectangle;
-  ClipRectangle.Bottom   := WindSize.Bottom - 1;
-
-  {$IFDEF FPC}
-    ScrollConsoleScreenBuffer(ConHandleStdOut
-      ,ScrollRectangle,ClipRectangle,DestinationCoord,FillChar);
-  {$ELSE}
-    ScrollConsoleScreenBuffer(ConHandleStdOut
-      ,@ScrollRectangle,@ClipRectangle,DestinationCoord,FillChar);
-  {$ENDIF FPC}
 end;
 
 (************************)
@@ -2501,6 +2503,15 @@ end;
 Procedure WritelnString(Const uString:UnicodeString);
 begin
   WriteString(uString+WideChar(#13)+WideChar(#10));
+end;
+
+Procedure WritelnString(TColor:Byte; Const uString:UnicodeString);
+Var SaveAttr : tTextAttr;
+begin
+  SaveAttr := TextAttr;
+  Textcolor(TColor);
+  WritelnString(uString);
+  TextAttr := SaveAttr;
 end;
 
 Procedure WritelnString(Const cString:TConsoleString);

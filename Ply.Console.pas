@@ -3354,6 +3354,24 @@ begin
   CurrentCursorPos := SaveCursorPos;
   Repeat
     ReadkeyW(Key,False);
+    if (Key=_Pos1) then
+    begin
+      CurrentCursorPos.x := 0;
+    end else
+    if (Key=_End) then
+    begin
+      CurrentCursorPos.x := BufferSize.x-1;
+    end else
+    if (Key=_CTRL_Pos1) then
+    begin
+      CurrentCursorPos.x := 0;
+      CurrentCursorPos.y := 0;
+    end else
+    if (Key=_CTRL_End) then
+    begin
+      CurrentCursorPos.x := 0;
+      CurrentCursorPos.y := BufferSize.y-1;
+    end else
     if (Key=_Down) then
     begin
       CurrentCursorPos.y := CurrentCursorPos.y + 1;
@@ -3508,11 +3526,7 @@ begin
   begin
     // It is necessary to set the cursor in the upper left corner to avoid
     // exeptions if the cursor ist outside the new size
-    if (CursorPosition.X>WindowSizeNew.X) or
-       (CursorPosition.Y>WindowSizeNew.Y) then
-    begin
-      Console.SetCursorPosition(0,0);
-    end;
+    Console.SetCursorPosition(0,0);
     // Create ZeroBasedRect from Size
     WindowRectNew.Create(WindowSizeNew);
     Try
@@ -3885,6 +3899,7 @@ Var dwConSize : LongWord;
     numCharsWritten : LongWord;
     DestCoord : TCoord;
 begin
+  SetCursorPosition(0,0);
   dwConSize := BufferSize.X * BufferSize.Y;
   DestCoord.Clr;
   FillConsoleOutputCharacter(ConHandleStdOut,#32,dwConSize, DestCoord, numCharsWritten);
@@ -4127,7 +4142,7 @@ begin
   FreeAndNil(Crt.Console);
 end;
 
-initialization
+Initialization
   PlyConsoleInit;
   Proc_CTRL_ALT_0_9    := ConsoleLocationMoveUserRegistry;
   Proc_CTRL_ALTGR_0_9  := ConsoleLocationSaveUserRegistry;

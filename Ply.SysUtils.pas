@@ -54,9 +54,6 @@ Function  PlyDirectoryExists(FilePathWildCards:String; ResultWithPath:Boolean) :
 
 Function  PlyFileCount(FileNameWildCards:String; IncludeSubDir:Boolean=False) : Longint;
 
-Function  PlyFileGetDateTime(Filename:String) : TDateTime;
-Procedure PlyFileSetDateTime(Filename:String; Const aDateTime:tDateTime);
-
           // Return first found (FilePath & FileName)
 Function  PlyGetFilename(FileNameWildCards:String) : String;
           // First = oldest File
@@ -72,8 +69,12 @@ Function  PlyFileRename(OldFilename,NewFilename:String) : Boolean;
 Function  PlyDirectoryCreate(Directory:String):Boolean;
 Function  PlyDirectoryDelete(Directory:String) : Boolean;
 {$IFDEF CONSOLE}
-Function  PlyDirectorySelect(StartDirectory:String) : String;
-Function  PlyFileSelect(StartDirectory:String; Filename:String='*'; ChangeDir:Boolean=True) : String;
+Function  PlyDirectorySelect(StartDirectory:String; Var Key:Word) : String; Overload;
+Function  PlyDirectorySelect(StartDirectory:String) : String; Overload;
+Function  PlyFileSelect(StartDirectory:String; Filename:String;
+            Var Key:Word; ChangeDir:Boolean=True) : String; Overload;
+Function  PlyFileSelect(StartDirectory:String; Filename:String='*';
+            ChangeDir:Boolean=True) : String; Overload;
 {$ENDIF CONSOLE}
 
 Function  PlyFileCompare_SizeTime(Filename1,Filename2:String) : Boolean;
@@ -90,11 +91,11 @@ Type
   strict private
     class threadvar FList: TStrings;
     class function EnumCodePagesProc(CodePage:PWideChar) : Boolean; static; stdcall;
-    class function GetCodepageName(Codepage:Cardinal) : String; static;
+    class function GetCodepageName(Codepage:TCodepage) : String; static;
   public
     class function GetInstalled(Const CodePageList:TStrings) : Boolean; static;
     class function GetSupported(Const CodePageList:TStrings) : Boolean; static;
-    class function GetName(CodePage: Cardinal) : String; static;
+    class function GetName(CodePage: TCodepage) : String; static;
   end;
 
   TSearchRecHelper = Record Helper for TSearchRec
@@ -184,7 +185,7 @@ Type tDirInfos = Class(tObject)
        FileStartDateTime       : TDateTime;
        // File.DateTime must be <=, if Zero take every file
        FileEndDateTime         : TDateTime;
-       Constructor Create;
+       Constructor Create(SearchFiles:Boolean=True);
        Destructor  Destroy; override;
        Procedure Clear;
        Procedure ClearEntries;
@@ -244,7 +245,7 @@ Type tTimecount = Record
        Function  GetMilliseconds : Extended;
      End;
 
-Var PlyLastResult : Integer = 0;
+Var PlyLastResult   : Integer = 0;
     PlyProgDataPath : String = '';
     PlyProgUserPath : String = '';
 
@@ -339,11 +340,12 @@ Function PlyFileSetAttributes(Const FileName:String; NewAttr:TPlyFileAttribute) 
 begin
   {$IFDEF FPC}
     SetFAttr(F, NewAttr);
-    PlyLastError := DosError;
-    Result := (PlyLastError=0);
+    PlyLastResult := DosError;
+    Result := (PlyLastResult=0);
   {$ELSE}
     {$WARNINGS OFF}
-    Result := (FileSetAttr(FileName,NewAttr)=0);
+    PlyLastResult := FileSetAttr(FileName,NewAttr);
+    Result := (PlyLastResult=0);
     {$WARNINGS ON}
   {$ENDIF}
 end;
@@ -371,10 +373,11 @@ begin
     if ((SetAttr and faArchive )=faArchive ) then Attr := (Attr or faArchive );
     {$IFDEF FPC}
       SetFAttr(F, SetAttr);
-      PlyLastError := DosError;
-      Result := (PlyLastError=0);
+      PlyLastResult := DosError;
+      Result := (PlyLastResult=0);
     {$ELSE}
-      Result := (FileSetAttr(FileName,Attr)=0);
+      PlyLastResult := FileSetAttr(FileName,Attr);
+      Result := (PlyLastResult=0);
     {$ENDIF}
     {$WARNINGS ON}
   end else Result := False;
@@ -594,34 +597,6 @@ begin
   Result := Counter;
 end;
 
-Function  PlyFileGetDateTime(Filename:String) : TDateTime;
-Var aSearchRec : tSearchrec;
-begin
-  if (PlyFileExists(Filename,aSearchRec)) then
-  begin
-    Result := aSearchRec.TimeStamp;
-  end else
-  begin
-    Result := 0;
-  end;
-end;
-
-Procedure PlyFileSetDateTime(Filename:String; Const aDateTime:tDateTime);
-Var FileHandle : Longint;
-begin
-  if (PlyFileExists(Filename)) then
-  begin
-    FileHandle := FileOpen(Filename, fmOpenReadWrite or fmShareDenyWrite);
-    if FileHandle > 0 then
-    begin
-      {$WARNINGS OFF}
-      FileSetDate(FileHandle, DateTimeToFileDate(aDateTime));
-      {$WARNINGS ON}
-      FileClose(FileHandle);
-    end;
-  end;
-end;
-
 // Return with upper/lower case of the file name
 Function  PlyGetFilename(FileNameWildCards:String) : String;
 Var aSearchRec : tSearchrec;
@@ -726,7 +701,7 @@ begin
   if (System.SysUtils.RenameFile(OldFilename,NewFilename)) then
   begin
     Result   := True;
-    PlyLastResult := 0;
+    PlyLastResult := NO_ERROR;
   end else
   begin
     Result := False;
@@ -756,7 +731,7 @@ begin
         // Check if the specified drive exists
         Success := TPath.DriveExists(ParentDir);
       end;
-      PlyLastResult  := 0;
+      PlyLastResult  := NO_ERROR;
       // If the ParentDir exists or could be created, then try to
       // create the directory
       if (Success) then
@@ -765,7 +740,7 @@ begin
         MkDir(Directory);
         {$I+}
         PlyLastResult := IoResult;
-        Result := (PlyLastResult=0);
+        Result := (PlyLastResult=NO_ERROR);
       end;
     end else
     begin
@@ -787,7 +762,7 @@ begin
       RmDir(Directory);
       {$I+}
       PlyLastResult := IoResult;
-      Result       := (PlyLastResult=0);
+      Result        := (PlyLastResult=0);
     end else
     begin
       // Directory does not exist -> True
@@ -797,11 +772,10 @@ begin
 end;
 
 {$IFDEF CONSOLE}
-Function  PlyDirectorySelect(StartDirectory:String) : String;
+Function  PlyDirectorySelect(StartDirectory:String; Var Key:Word) : String; Overload;
 Var
   DirInfos : tDirInfos;
   DirInfo : tDirInfo;
-  Key : Word;
 begin
   Result := '';
   DirInfos := TDirInfos.Create;
@@ -824,11 +798,17 @@ begin
   DirInfos.Free;
 end;
 
-Function  PlyFileSelect(StartDirectory:String; Filename:String='*'; ChangeDir:Boolean=True) : String;
+Function  PlyDirectorySelect(StartDirectory:String) : String;
+Var Key : Word;
+begin
+  Result := PlyDirectorySelect(StartDirectory,Key);
+end;
+
+Function  PlyFileSelect(StartDirectory:String; Filename:String;
+            Var Key:Word; ChangeDir:Boolean=True) : String; Overload;
 Var
   DirInfos : tDirInfos;
   DirInfo : tDirInfo;
-  Key : Word;
 begin
   Result := '';
   DirInfos := TDirInfos.Create;
@@ -837,7 +817,6 @@ begin
      else DirInfos.SearchPath := ExeFile_Path;
   DirInfos.AddDirs := ChangeDir;
   DirInfos.IncludeFilter.Add(Filename);
-
   Repeat
     DirInfos.ClearEntries;
     if (DirInfos.Execute) then
@@ -852,10 +831,23 @@ begin
       ConsoleShowNote('File-Select','No files found',DirInfos.SearchPath+DirInfos.IncludeFilter.CommaText);
       Key := _ESC;
     end;
-  Until ((Key=_Return) and not(DirInfo.Directory)) or (Key=_Esc);
-  if (Key=_Return) then Result := DirInfo.Name;
+  Until (((Key=_Return) or ((Key>=_F2) and (Key<=_F12))) and not(DirInfo.Directory))
+        or (Key=_Esc);
+  if (Key=_Return)                or
+     ((Key>=_F2) and (Key<=_F12)) then
+  begin
+    Result := DirInfo.Name;
+  end;
   DirInfos.Free;
 end;
+
+Function  PlyFileSelect(StartDirectory:String; Filename:String='*';
+            ChangeDir:Boolean=True) : String;
+Var Key:Word;
+begin
+  Result := PlyFileSelect(StartDirectory,Filename,Key,ChangeDir);
+end;
+
 {$ENDIF CONSOLE}
 
 Function  PlyFileCompare_SizeTime(Filename1,Filename2:String) : Boolean;
@@ -900,7 +892,6 @@ begin
           Result := True;
         end else
         begin
-          File1.Init;
           if (File1.Open(Filename1,1)) then
           begin
             File2.Init;
@@ -943,12 +934,13 @@ begin
     AssignFile(Datei,Filename);
     Try
       Erase(Datei);
-      if (FileExists(Filename)) then PlyLastResult := 5
-                                else PlyLastResult := 0;
+      if (FileExists(Filename))
+         then PlyLastResult := ERROR_ACCESS_DENIED
+         else PlyLastResult := NO_ERROR;
     Except
-      PlyLastResult := 5;
+      PlyLastResult := ERROR_ACCESS_DENIED;
     End;
-    if (PlyLastResult=0) then Result := True;
+    if (PlyLastResult=NO_ERROR) then Result := True;
   end else Result := True;
 end;
 
@@ -1029,7 +1021,7 @@ end;
 (*****************************)
 (***** TWindowsCodepages *****)
 (*****************************)
-class function TWindowsCodepages.GetCodepageName(Codepage:Cardinal) : String;
+class function TWindowsCodepages.GetCodepageName(Codepage:TCodepage) : String;
 var CpInfoEx : TCPInfoEx;
 begin
   Result := '';
@@ -1044,7 +1036,7 @@ begin
 end;
 
 class function  TWindowsCodepages.EnumCodePagesProc(CodePage:PWideChar) : Boolean;
-Var CP : cardinal;
+Var CP : TCodepage;
 begin
   Result := False;
   if (CodePage<>Nil) then
@@ -1099,7 +1091,7 @@ begin
   end;
 end;
 
-class function TWindowsCodepages.GetName(CodePage: Cardinal) : String;
+class function TWindowsCodepages.GetName(CodePage: TCodepage) : String;
 begin
   Result := GetCodepageName(CodePage);
 end;
@@ -1134,6 +1126,8 @@ begin
 end;
 
 Procedure tDirInfo.Init(Var sr:tSearchRec; FilePath:String=''; ExcludeRootPath:String='');
+//Var DaTi : DaTi_Obj;
+//    FileTime : tFileDateTime;
 begin
   Attr     := sr.Attr;
   if (FilePath<>'') and (ExcludeRootPath<>'') then
@@ -1143,6 +1137,14 @@ begin
   Name     := FilePath + sr.Name;
   Size     := sr.Size;
   DateTime := sr.TimeStamp;
+  //  WriteXY(1,16,LightGreen,'Filename      : '+Name);
+  //  WriteXY(1,17,LightGreen,'sr.TimeStamp  : '+DateTime.ToDateTimeExcel);
+  //  DaTi.InitDaTi(sr.Time);
+  //  WriteXY(1,18,LightGreen,'sr.DaTi       : '+DaTi.DateTime_Excel);
+  //  FileTime.FileTime := sr.FindData.ftLastWriteTime;
+  //  WriteXY(1,19,LightGreen,'LastWrite UTC : '+FileTime.DateTime.ToDateTimeExcel);
+  //  FileTime.ToLocalTime;
+  //  WriteXY(1,20,LightGreen,'LastWrite GMT : '+FileTime.DateTime.ToDateTimeExcel);
 end;
 
 Procedure tDirInfo.InitDetails(eName:String; eSize:tFileSize; eDateTime:tDateTime; eAttr:TPlyFileAttribute);
@@ -1416,7 +1418,7 @@ begin
 end;
 {$ENDIF DELPHIXE8DOWN}
 
-Constructor tDirInfos.Create;
+Constructor tDirInfos.Create(SearchFiles:Boolean=True);
 begin
   Inherited Create;
   FRootPath         := '';
@@ -1426,8 +1428,15 @@ begin
   {$ENDIF CONSOLE}
   FSearchPath       := '';
   SetLength(DInfos,0);
-  AddFiles          := True;
-  AddDirs           := False;
+  if (SearchFiles) then
+  begin
+    AddFiles          := True;
+    AddDirs           := False;
+  end else
+  begin
+    AddFiles          := False;
+    AddDirs           := True;
+  end;
   IncludeSubDirs    := False;
   ExcludeSubDirs    := TStringList.Create;
   IncludeFilter     := TStringList.Create;
@@ -1454,8 +1463,9 @@ begin
   {$ENDIF CONSOLE}
   FSearchPath       := '';
   SetLength(DInfos,0);
-  AddFiles          := True;
-  AddDirs           := False;
+  // Do not change Create-Settings
+  // AddFiles          := True;
+  // AddDirs           := False;
   IncludeSubDirs    := False;
   ExcludeSubDirs.Clear;
   IncludeFilter.Clear;
@@ -1645,6 +1655,7 @@ begin
             if ((FileStartDateTime=0) or (sr.TimeStamp >= FileStartDateTime)) and
                ((FileEndDateTime=0)   or (sr.TimeStamp <= FileEndDateTime))   then
             begin
+              // WriteXY(1,15,Yellow,'Filename      : '+FRootPath+sr.Name);
               Add(sr,SearchPath);
               Result := True;
             end;
@@ -2036,31 +2047,6 @@ begin
     Result := Now - (n1/86400);
   end;
 end;
-
-//function GetWriteLongAddress: Pointer;
-//asm
-//  {$ifdef CPU64}
-//    mov rax,offset System.@WriteLong
-//  {$else}
-//    mov eax,offset System.@WriteLong
-//  {$endif}
-//end;
-//
-//function GetWriteStringAddress: Pointer;
-//asm
-//  {$ifdef CPU64}
-//    mov rax,offset System.@WriteString
-//  {$else}
-//    mov eax,offset System.@WriteString
-//  {$endif}
-//end;
-
-//function WriteLongFix(var t: TTextRec; val, width: Integer): Pointer;
-//var S: ShortString;
-//begin
-//  Str(val:width, S);
-//  Result := System.WriteString(t, S, width);
-//end;
 
 function tTimecount.GetMilliseconds: Extended;
 begin

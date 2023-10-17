@@ -2,7 +2,7 @@
 
   Name          : Ply.Files.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 02.07.2023
+  Last modified : 10.10.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -18,78 +18,161 @@ Uses
   Ply.Types,
   System.SysUtils;
 
-Const fsOriginFromBeginning = 0;
-      fsOriginFromCurrent   = 1;
-      fsOriginFromEnd       = 2;
+resourcestring
+  // #3 - ERROR_PATH_NOT_FOUND
+  SPathNotFound = 'Path not found';
+  // #19 - ERROR_WRITE_PROTECT
+  SFileWriteProtected = 'File is write protected';
+  // #32 - ERROR_SHARING_VIOLATION
+  SSharingViolation = 'Sharing violation';
+  // #38 - ERROR_HANDLE_EOF
+  SEndOfFile = 'Reached end of file';
+  // #90 - ERROR_INVALID_RECSIZE
+  SInvalidRecsize = 'Invalid recordsize';
+  // #100 - IOERROR_DISK_READ
+  SFileReadError = 'File read error';
+  // #101 - IOERROR_DISK_WRITE
+  SFileWriteError = 'File write error';
+  // #102 - IOERROR_FILE_NOT_ASSIGNED
+  SFileNotAssigned = 'File not assigned';
+  // #103 - IOERROR_FILE_NOT_OPEN
+  SFileNotOpen = 'File not open';
+  // #104 - IOERROR_FILE_NOT_OPEN_FOR_INPUT
+  SFileNotOpenForInput = 'File not open for input';
+  // #105 - IOERROR_FILE_NOT_OPEN_FOR_OUTPUT
+  SFileNotOpenForOutput = 'File not open for output';
+  // #106 - IOERROR_INVALID_NUMERIC_FORMAT
+  SInvalidNumericFormat = 'Invalid numeric format';
 
-Var FileLastError : Longint = 0;
-    FileDebugMode : Boolean = False;
+Const
+  ERROR_INVALID_RECSIZE            =  90;
+  IOERROR_DISK_READ                = 100;
+  IOERROR_DISK_WRITE               = 101;
+  IOERROR_FILE_NOT_ASSIGNED        = 102;
+  IOERROR_FILE_NOT_OPEN            = 103;
+  IOERROR_FILE_NOT_OPEN_FOR_INPUT  = 104;
+  IOERROR_FILE_NOT_OPEN_FOR_OUTPUT = 105;
+  IOERROR_INVALID_NUMERIC_FORMAT   = 106;
+
+  fsOriginFromBeginning            = 0;
+  fsOriginFromCurrent              = 1;
+  fsOriginFromEnd                  = 2;
+
+  (* $1000000 = 16.777.216 Byte | Read/Write max 16 MByte *)
+  _BlockRead_MaxByte   : Int64     = $1000000;
+  _BlockWrite_MaxByte  : Int64     = $1000000;
 
 Type tPlyFile = object
+     f : File;
      Private
-       f : File;
-       Function GetFileName : String;
+       FErrorCode : Integer;
+       FErrorMessage : String;
+     Protected
+       Procedure Success;
+       Procedure CreateError(eErrorCode:Integer; eErrorMsg:String;
+                   eFuncName:String; ePath:String='');
+       Procedure HandleException(eException: TObject; Const eFuncName:String;
+                   ePath:String='');
+       Procedure DebugCheckRecSize(aRecSize:tFileRecSize);
+     Private
+       Procedure DebugShowError(Title,aFileName,Msg1:String; Msg2:String='');
+       Function  GetDebugMode : Boolean;
+       Procedure SetDebugMode(Const Value:Boolean);
+       Function  GetFileName : String;
+                 // Reset: Open exsisting file, fails if file not exists
+       Function  Reset(Const aFileName:String; aRecSize:tFileRecSize;
+                   aFileModeOpen:TFileModeOpen=fmRW_Share) : Boolean;
+                 // Rewrite: Create or Delete & Create if file exists
+       Function  Rewrite(Const aFileName:String; aRecSize:tFileRecSize;
+                   aFileModeOpen:TFileModeOpen=fmRW_Share) : Boolean;
      Public
-       Property FileName:String Read GetFileName;
+       Property  FileName: String Read GetFileName;
+       Property  ErrorCode: Integer Read FErrorCode Write FErrorCode;
+       Property  ErrorMessage: String Read FErrorMessage Write FErrorMessage;
+       Property  GlobalDebugMode: Boolean Read GetDebugMode Write SetDebugMode;
        Procedure Init;
+                 // Create: Delete & Create new file
+       Function  Create(aFileName:String; aRecSize:tFileRecSize;
+                   aFileModeOpen:tFileModeOpen=fmRW_Share) : Boolean;
+                 // OpenRead: Open existing file for Read
+       Function  OpenRead(aFilename:String; aRecSize:tFileRecSize;
+                   aFileModeOpen:TFileModeOpen=fmR_Share) : Boolean;
+                 // OpenWrite: Open existing file or Create file
+       Function  OpenWrite(aFilename:String; aRecSize:tFileRecSize;
+                   aFileModeOpen:TFileModeOpen=fmW_Share) : Boolean;
+                 // Open: open existing file or create file for read & write
        Function  Open(aFileName:String; aRecSize:tFileRecSize;
-                   aFileMode:tFileModeOpen=fmShare) : Boolean;
+                   aFileModeOpen:tFileModeOpen=fmRW_Share) : Boolean;
        Function  Handle : tHandle;
-       Function  Mode : TFileModeStatus;
+       Function  FileModeStatus : TFileModeStatus;
+       Function  FileModeStatusText : String;
        Function  RecSize : Int64;
        Function  IsOpen : Boolean;
        Function  Eof : Boolean;
        Function  Filepos : Longint;
        Function  Filesize : Longint;
        Function  Seek(FPos:Longint) : Boolean;
-       Function  DosRead(Var Daten) : Boolean;
-       Function  BlockRead(Var Daten; RecCount:tFileRecCount; Out ReadRec:tFileRecCount) : Boolean;
-       Function  DosWrite(Var Daten) : Boolean;
-       Function  BlockWrite(Var Daten; RecCount:tFileRecCount; Out WrittenRec:tFileRecCount) : Boolean;
        Procedure Seek_Eof;
+       Function  DosRead(Var Daten) : Boolean;
+       Function  DosWrite(Var Daten) : Boolean;
+       Function  BlockRead(Var Daten; RecCount:tFileRecCount;
+                   Out ReadRec:tFileRecCount) : Boolean;
+       Function  BlockWrite(Var Daten; RecCount:tFileRecCount;
+                   Out WrittenRec:tFileRecCount) : Boolean;
        Function  Seek_Read(FPos:Longint; Var Daten) : Boolean;
        Function  Seek_Write(FPos:Longint; Var Daten) : Boolean;
        Procedure Truncate;
        Function  Erase : Boolean;
-       Procedure Rename(NewName:String);
+       Function  Rename(NewFileName:String) : Boolean;
        Function  DeleteRecord(FPosRecord:Longint) : Boolean;
-       Procedure Close;
-       Procedure Close_Delete;
+       Function  Close : Boolean;
+       Function  Close_Delete : Boolean;
+       Function  Close_Rename(NewFileName:String) : Boolean;
      end;
 
 Type tPlyTextfile = Object
      Private
        tf : Text;
+       FErrorCode : Integer;
+       FErrorMessage : String;
+       Procedure Success;
+       Procedure CreateError(eErrorCode:Integer; eErrorMsg:String;
+                   eFuncName:String; ePath:String='');
+       Procedure HandleException(eException: TObject; Const eFuncName:String;
+                   ePath:String='');
+       Procedure DebugShowError(Title,aFileName,Msg1:String; Msg2:String='');
        Function  GetFilename : String;
      Public
-       Property  Filename:String Read GetFilename;
+       Property  Filename: String Read GetFilename;
+       Property  ErrorCode: Integer Read FErrorCode;
+       Property  ErrorMessage: String Read FErrorMessage;
        Procedure Init;
        Function  Handle : tHandle;
-       Function  Mode : TFileModeStatus;
-       Function  GetFilemode : String;
+       Function  FileModeStatus : TFileModeStatus;
+       Function  FileModeStatusText : String;
        Function  IsOpen : Boolean;
-       Function  Open_Read_Filemode(DName:String; FM:Byte) : Boolean;
-       Function  Open_Read(DName:String) : Boolean;
-       Function  Open_Read_Exklusiv(DName:String) : Boolean;
-       Function  Open_Write_Filemode(DName:String; FM:Byte; UTF8_Bom:Boolean=False) : Boolean;
-       Function  Open_Write(DName:String; UTF8_BOM:Boolean=False) : Boolean;
-       Function  Open_Write_Exklusiv(DName:String) : Boolean;
-                 (* Create = Delete and Open_Write *)
-       Function  Create(DName:String; Codepage:Word=_Codepage_850) : Boolean;
-       Function  Append : Boolean;
+       Function  OpenReadFilemode(aFileName:String;
+                   aFileModeOpen:TFileModeOpen) : Boolean;
+       Function  OpenRead(aFileName:String) : Boolean;
+       Function  OpenReadExclusive(aFileName:String) : Boolean;
+       Function  OpenWriteFilemode(aFileName:String;
+                   aFileModeOpen: TFileModeOpen;
+                   UTF8_Bom: Boolean=False) : Boolean;
+       Function  OpenWrite(aFileName:String;
+                   UTF8_BOM: Boolean=False) : Boolean;
+       Function  OpenWriteExclusive(aFileName:String;
+                   UTF8_BOM: Boolean=False) : Boolean;
+                 // Create = Delete and Open_Write
+       Function  Create(aFileName:String; Codepage:Word=_Codepage_850) : Boolean;
        Function  Eof : Boolean;
        Function  Readln(Var Help:String) : Boolean;
        Function  Write(Help:String) : Boolean;
        Function  Writeln(Help:String) : Boolean;
        Function  Erase : Boolean;
        Function  Rename(NewName:String) : Boolean;
-       Procedure Close_System;
-       Procedure Close;
-       Procedure Close_Delete;
+       Function  Close : Boolean;
+       Function  Close_Delete : Boolean;
      end;
-
-Function  TextfileOpenRead(var Textfile:Text; Filename:String) : Boolean;
-Function  TextfileOpenWrite(var Textfile:Text; Filename:String) : Boolean;
 
 implementation
 
@@ -99,25 +182,103 @@ Uses
   {$ELSE}
     VCL.Dialogs,
   {$ENDIF}
+  Ply.Math,
   Ply.StrUtils,
   Ply.SysUtils,
+  System.SysConst,
   System.Math,
-  System.StrUtils;
+  System.StrUtils,
+  Winapi.Windows;
 
-(* $1000000 = 16.777.216 Byte | Read/Write max 16 MByte *)
-Const _BlockRead_MaxByte     : Int64  = $1000000;
-      _BlockWrite_MaxByte    : Int64  = $1000000;
+Var FileDebugMode : Boolean = False;
 
-Procedure ShowFileErrorMessage(Title,FileName,Msg1:String; Msg2:String='');
+(********************)
+(***** tPlyFile *****)
+(********************)
+Procedure tPlyFile.Success;
+begin
+  FErrorCode := 0;
+  FErrorMessage := '';
+end;
+
+Procedure tPlyFile.CreateError(eErrorCode:Integer; eErrorMsg:String;
+            eFuncName:String; ePath:String='');
+begin
+  if (ePath='') then ePath := FileName;
+  FErrorCode := eErrorCode;
+  FErrorMessage := FErrorCode.ToString + '│'
+                 + eErrorMsg           + '│'
+                 + eFuncName           + '│'
+                 + '[' + ePath + ']';
+  DebugShowError(eFuncName,ePath,FErrorMessage);
+end;
+
+Procedure tPlyFile.HandleException(eException: TObject; Const eFuncName:String;
+            ePath:String='');
+begin
+  if (ePath='') then ePath := FileName;
+  if (Exception(eException).ClassNameIs('EInOutError')) then
+  begin
+    FErrorCode := EInOutError(eException).ErrorCode;
+    FErrorMessage := EInOutError(eException).ErrorCode.ToString + '│';
+    case FErrorCode of
+      ERROR_PATH_NOT_FOUND    : FErrorMessage := FErrorMessage + SPathNotFound + '│';
+      ERROR_SHARING_VIOLATION : FErrorMessage := FErrorMessage + SSharingViolation + '│';
+    else
+      FErrorMessage := FErrorMessage + EInOutError(eException).Message + '│';
+    end;
+    FErrorMessage := FErrorMessage + eFuncName;
+    {$IFDEF DELPHI10UP}
+    if (EInOutError(eException).Path<>'')
+       then FErrorMessage := FErrorMessage + '│' + EInOutError(eException).Path else
+    {$ENDIF DELPHI10UP}
+    if (ePath<>'')
+       then FErrorMessage := FErrorMessage + '│' + ePath;
+  end else
+  begin
+    FErrorCode := 0;
+    FErrorMessage := Exception(eException).Message + '│'
+                   + eFuncName;
+    if (ePath<>'')
+       then FErrorMessage := FErrorMessage + '│' + ePath;
+  end;
+  DebugShowError(eFuncName,ePath,FErrorMessage);
+end;
+
+Procedure tPlyFile.DebugCheckRecSize(aRecSize:tFileRecSize);
+Var lFileSizeByte : Int64;
+begin
+  (* When Debug-Mode is activated *)
+  if (FileDebugMode) then
+  begin
+    (* Check whether the size of the file fit to aRecSize *)
+    if (aRecSize>1) then
+    begin
+      lFileSizeByte := PlyFileSizeByte(FileName);
+      if (lFileSizeByte>0) then
+      begin
+        if ((lFileSizeByte mod aRecSize)<>0) then
+        begin
+          CreateError(ERROR_INVALID_RECSIZE
+            ,SInvalidRecsize+': FileSizeByte='+IntToStr(lFileSizeByte)
+              +', RecSize='+IntToStr(aRecSize)
+            ,'tPlyFile.DebugCheckRecSize');
+        end;
+      end;
+    end;
+  end;
+end;
+
+Procedure tPlyFile.DebugShowError(Title,aFileName,Msg1:String; Msg2:String='');
 begin
   if (FileDebugMode) then
   begin
     {$IFDEF CONSOLE}
-      ConsoleShowError('Error('+IntToStr(FileLastError)+'): '+Title
-        ,'FileName: '+FileName,Msg1,Msg2);
+      ConsoleShowError('Error['+IntToStr(ErrorCode)+']: '+Title
+        ,'FileName: '+aFileName,Msg1,Msg2);
     {$ELSE}
       ShowMessage(Title+sLineBreak
-        +'Error('+IntToStr(FileLastError)+')'+sLineBreak
+        +'Error('+IntToStr(ErrorCode)+')'+sLineBreak
         +'FileName: '+FileName+sLineBreak
         +Msg1+sLineBreak
         +Msg2+sLineBreak);
@@ -125,193 +286,171 @@ begin
   end;
 end;
 
-Function  FileSizeByte(aFileName:String) : Int64;
-Var sr : TSearchRec;
+Function  tPlyFile.GetDebugMode : Boolean;
 begin
-  if (FindFirst(aFileName, faAnyFile, sr) = 0) then
-  begin
-    Result := sr.Size;
-  end else
-  begin
-    Result := -1;  // File not found
-  end;
-  FindClose(sr);
+  Result := FileDebugMode;
 end;
 
-Function  FileReset(Var f:File; Const aFileName:String; aRecSize:tFileRecSize;
-            aFileMode:TFileModeOpen) : Boolean;
+Procedure tPlyFile.SetDebugMode(Const Value:Boolean);
 begin
-  Try
-    System.AssignFile(f, aFileName);
-    System.FileMode := aFileMode;
-    {$I-}
-    System.Reset(f,aRecSize);
-    {$I+}
-    FileLastError := IoResult;
-    Result := (FileLastError=0);
-  Except
-    Result := False;
-  End;
+  FileDebugMode := Value;
 end;
 
-Function  FileRewrite(Var f:File; Const aFileName:String; aRecSize:tFileRecSize;
-            aFileMode:TFileModeOpen) : Boolean;
-begin
-  {$I-}
-  System.Assign(f, aFileName);
-  System.FileMode := aFileMode;
-  System.Rewrite(f,aRecSize);
-  {$I+}
-  FileLastError := IoResult;
-  Result := (FileLastError=0);
-end;
-
-(***********************************************************)
-(* Open exsisting file or create file                      *)
-(***********************************************************)
-Function  FileOpen(Var f:File; aFileName:String; aRecSize:tFileRecSize;
-            aFileMode:TFileModeOpen) : Boolean;
-Var lFileSizeByte : Longint;
-begin
-  if (aFileName<>'') then
-  begin
-    if (aFileMode<>fmShare) and (aFileMode<>fmDenyRW) and
-       (aFileMode<>fmDenyW) and (aFileMode<>fmShareR) then
-    begin
-      // nwErrorCode := 11; (* 11 = Ungültiges Format *)
-      // NetwareLog('FileOpen',DName,'Filemode='+IntToStr(aFileMode),'');
-      if (aFileMode in [fmOpenRead..fmOpenReadWrite]) then
-      begin
-        aFileMode := aFileMode + fmShareDenyNone;
-      end;
-    end;
-    if (FileReset(f,aFileName,aRecSize,aFileMode)) then
-    begin
-      FileOpen := True;
-      (* When Debug-Mode is activated *)
-      if (FileDebugMode) then
-      begin
-        (* Check whether the size of the file fit to aRecSize *)
-        if (aRecSize>1) then
-        begin
-          lFileSizeByte := FileSizeByte(aFileName);
-          if (lFileSizeByte>0) then
-          begin
-            if ((lFileSizeByte mod aRecSize)<>0) then
-            begin
-              ShowFileErrorMessage('Error: FileOpen (FileSize<>RecSize)'
-                ,aFileName
-                ,'FileSize: '+IntToStr(lFileSizeByte)
-                ,'RecSize: '+IntToStr(aRecSize));
-            end;
-          end;
-        end;
-      end;
-    end else
-    (* Error(2) = File not found          *)
-    (* if File does not exist then create *)
-    if (FileLastError=2) then
-    begin
-      Result := FileRewrite(f,aFileName,aRecSize,aFileMode);
-      if (FileLastError<>0) then
-      begin
-        ShowFileErrorMessage('FileOpen (Could not create file)',aFileName,'');
-      end;
-    end else
-    (* Error(3) = Path not found          *)
-    if (FileLastError=3) then
-    begin
-      Result := False;
-      ShowFileErrorMessage('FileOpen (Path not found)',aFilename,'');
-    end else
-    (* Error(4) : Too many files open *)
-    if (FileLastError=4) then
-    begin
-      Result := False;
-      ShowFileErrorMessage('FileOpen (Too many files open)',aFilename,'');
-    end else
-    (* Error(5): Access denied - by other user *)
-    if (FileLastError<>5) then
-    begin
-      Result := False;
-      (* nothing to report *)
-    end else
-    (* if not Error(5) then show Error-Message *)
-    begin
-      Result := False;
-      ShowFileErrorMessage('FileOpen ',aFileName,'');
-    end;
-  end else
-  begin
-    Result := False;
-    FileLastError := 2; (* 2 = File not found *)
-  end;
-  (* Set back to Standard-FileMode *)
-  System.Filemode := fmShare;
-end;
-
-Function  TextfileOpenRead(var Textfile:Text; Filename:String) : Boolean;
-begin
-  PlyLastResult := 0;
-  Filemode := $42; { = nwShare }
-  if (FileExists(Filename)) then
-  begin
-    {$I-}
-    Assign(Textfile,Filename);
-    Reset(Textfile);
-    PlyLastResult := IoResult;
-    {$I+}
-  end else
-  begin
-    {$I-}
-    Assign(Textfile,Filename);
-    Rewrite(Textfile);
-    PlyLastResult := IoResult;
-    {$I+}
-  end;
-  Result := (PlyLastResult=0);
-end;
-
-Function  TextfileOpenWrite(var Textfile:Text; Filename:String) : Boolean;
-begin
-  PlyLastResult := 0;
-  Filemode := $42; { = nwShare }
-  if (FileExists(Filename)) then
-  begin
-    Assign(Textfile,Filename);
-    {$I-}
-    Append(Textfile);
-    {$I+}
-    PlyLastResult := IoResult;
-  end else
-  begin
-    Assign(Textfile,Filename);
-    {$I-}
-    Rewrite(Textfile);
-    {$I+}
-    PlyLastResult := IoResult;
-  end;
-  Result := (PlyLastResult=0);
-end;
-
-(*******************************)
-(***** tFile - Declaration *****)
-(*******************************)
 Function  tPlyFile.GetFileName: string;
 begin
   Result := tFilerec(f).Name;
 end;
 
+Function  tPlyFile.Reset(Const aFileName:String; aRecSize:tFileRecSize;
+            aFileModeOpen:TFileModeOpen=fmRW_Share) : Boolean;
+begin
+  Result := False;
+  try
+    System.AssignFile(f, aFileName);
+    System.FileMode := aFileModeOpen;
+    System.Reset(f,aRecSize);
+    Success;
+    Result := True;
+  except
+    On E : Exception do
+      HandleException(e,'tPlyFile.Reset',aFilename);
+  end;
+end;
+
+Function  tPlyFile.Rewrite(Const aFileName:String; aRecSize:tFileRecSize;
+            aFileModeOpen:TFileModeOpen=fmRW_Share) : Boolean;
+begin
+  Result := False;
+  try
+    System.AssignFile(f, aFileName);
+    System.FileMode := aFileModeOpen;
+    System.Rewrite(f,aRecSize);
+    Success;
+    Result := True;
+  except
+    On E : Exception do
+      HandleException(e,'tPlyFile.Rewrite',aFilename);
+  end;
+end;
+
 Procedure tPlyFile.Init;
 begin
   FillChar(tFilerec(f),sizeof(tFilerec),#0);
+  FErrorCode := 0;
+  FErrorMessage := '';
+end;
+
+Function  tPlyFile.Create(aFileName:String; aRecSize:tFileRecSize;
+            aFileModeOpen:tFileModeOpen=fmRW_Share) : Boolean;
+begin
+  Init;
+  Result := False;
+  if (PlyFileDelete(aFileName)) then
+  begin
+    if (Rewrite(aFileName,aRecSize,aFileModeOpen)) then
+    begin
+      Result := True;    
+    end;
+  end;
+end;
+
+Function  tPlyFile.OpenRead(aFilename:String; aRecSize:tFileRecSize;
+            aFileModeOpen:TFileModeOpen=fmR_Share) : Boolean;
+Var sRec : tSearchrec;
+begin
+  Init;
+  Result := False;
+  if (PlyFileExists(aFilename,sRec)) then
+  begin
+    // if file is write-protected
+    if ((sRec.Attr and faReadOnly)<>0) then
+    begin
+      // downgrade filemode to read only
+      aFileModeOpen := aFileModeOpen and not(FM_W) and not(FM_RW);
+    end;
+    if (Reset(aFilename,aRecSize,aFileModeOpen)) then
+    begin
+      Result := True;
+      DebugCheckRecSize(aRecSize);
+    end;
+  end else
+  begin
+    CreateError(ERROR_FILE_NOT_FOUND,SFileNotFound
+      ,'tPlyFile.OpenRead',aFilename);
+  end;
+end;
+
+Function  tPlyFile.OpenWrite(aFilename:String; aRecSize:tFileRecSize;
+            aFileModeOpen:TFileModeOpen=fmW_Share) : Boolean;
+Var sRec : tSearchrec;
+begin
+  Init;
+  Result := False;
+  if (PlyFileExists(aFilename,sRec)) then
+  begin
+    // if file is write-protected
+    if ((sRec.Attr and faReadOnly)<>0) then
+    begin
+      CreateError(ERROR_WRITE_PROTECT,SFileWriteProtected
+        ,'tPlyFile.OpenWrite',aFilename);
+    end else
+    if (Reset(aFilename,aRecSize,aFileModeOpen)) then
+    begin
+      Result := True;
+      DebugCheckRecSize(aRecSize);
+    end;
+  end else
+  begin
+    if (Rewrite(aFilename,aRecSize,aFileModeOpen)) then
+    begin
+      Result := True;
+    end;
+  end;
 end;
 
 Function  tPlyFile.Open(aFileName:String; aRecSize:tFileRecSize;
-            aFileMode:TFileModeOpen=fmShare) : Boolean;
+            aFileModeOpen:TFileModeOpen=fmRW_Share) : Boolean;
 begin
   Init;
-  Result := FileOpen(f,aFileName,aRecSize,aFileMode);
+  Result := False;
+  if (aFileName<>'') then
+  begin
+    if (PlyFileExists(aFilename)) then
+    begin
+      if (Reset(aFileName,aRecSize,aFileModeOpen)) then
+      begin
+        Result := True;
+        DebugCheckRecSize(aRecSize);
+      end;
+    end else
+    // if File does not exist then create file
+    begin
+      Result := Rewrite(aFileName,aRecSize,aFileModeOpen);
+    end;
+    (* Error(3) = Path not found          *)
+    if (ErrorCode=ERROR_PATH_NOT_FOUND) then
+    begin
+      DebugShowError('FileOpen (Path not found)'
+        ,aFilename,ErrorMessage);
+    end else
+    (* Error(4) : Too many files open *)
+    if (ErrorCode=ERROR_TOO_MANY_OPEN_FILES) then
+    begin
+      DebugShowError(STooManyOpenFiles+'FileOpen (Too many files open)'
+        ,aFilename,ErrorMessage);
+    end else
+    if (ErrorCode<>0) then
+    begin
+      DebugShowError('FileOpen ',aFileName,ErrorMessage);
+    end;
+  end else
+  begin
+    Result := False;
+    CreateError(ERROR_FILE_NOT_FOUND,SFileNotFound
+      ,'tPlyFile.Open','no filename');
+  end;
+  (* Set back to Default-FileMode *)
+  System.Filemode := fmRW_Share;
 end;
 
 Function  tPlyFile.Handle : tHandle;
@@ -319,9 +458,21 @@ begin
   Result := tFilerec(f).Handle;
 end;
 
-Function  tPlyFile.Mode : TFileModeStatus;
+Function  tPlyFile.FileModeStatus : TFileModeStatus;
 begin
   Result := tFilerec(f).Mode;
+end;
+
+Function  tPlyFile.FileModeStatusText : String;
+begin
+  case FileModeStatus of
+    fmclosed : Result := 'Closed';
+    fmInput  : Result := 'Input ';
+    fmOutput : Result := 'Output';
+    fmInOut  : Result := 'InOut ';
+  else
+    Result := IntToString(FileModeStatus,6);
+  end;
 end;
 
 Function  tPlyFile.RecSize : Int64;
@@ -330,81 +481,110 @@ begin
 end;
 
 Function  tPlyFile.IsOpen : Boolean;
-Var FMode : TFileModeStatus;
+Var CurFileModeStatus : Word;
 begin
-  FMode := Mode;
-  if (FMode=FMINPUT)  or
-     (FMode=FMOUTPUT) or
-     (FMode=FMINOUT)  then Result := True
-                      else Result := False;
+  CurFileModeStatus := FileModeStatus;
+  Result := (CurFileModeStatus>=fmInput) and (CurFileModeStatus<=fmInOut);
 end;
 
 Function  tPlyFile.Eof : Boolean;
 begin
   if (IsOpen) then
   begin
-    Result := System.Eof(f);
+    Result := False;
+    Try
+      Result := System.Eof(f);
+      Success;
+    Except
+      On E : Exception do
+        HandleException(e,'tPlyFile.Eof');
+    End;
   end else
   begin
+    CreateError(IOERROR_FILE_NOT_OPEN,SFileNotOpen
+      ,'tPlyFile.Eof');
     Result := True;
   end;
 end;
 
 Function  tPlyFile.Filepos : Longint;
 begin
-  if (IsOpen) then
-  begin
+  Result := -1;
+  Try
     Result := System.Filepos(f);
-  end else
-  begin
-    Result := -1;
-  end;
+  Except
+    On E : Exception do
+      HandleException(e,'tPlyFile.Filepos');
+  End;
 end;
 
 Function  tPlyFile.Filesize : Longint;
 begin
-  if (IsOpen) then
-  begin
+  Result := -1;
+  Try
     Result := System.Filesize(f);
-  end else
-  begin
-    Result := -1;
-  end;
+  Except
+    On E : Exception do
+      HandleException(e,'tPlyFile.Filesize');
+  End;
 end;
 
 Function  tPlyFile.Seek(FPos:Longint) : Boolean;
-Var FSize                    : Longint;
 begin
-  if (FPos<0) then FPos := 0 else
-  begin
-    FSize := Filesize;
-    if (FPos>FSize) then FPos := FSize;
-  end;
-  {$I-}
-  System.Seek(f,FPos);
-  {$I+}
-  FileLastError := IoResult;
-  Result  := (FileLastError=0);
+  Result := False;
+  FPos := ValueMinMax(FPos,0,Filesize);
+  Try
+    System.Seek(f,FPos);
+    Result := True;
+  Except
+    On E : Exception do
+      HandleException(e,'tPlyFile.Seek');
+  End;
+end;
+
+Procedure tPlyFile.Seek_Eof;
+begin
+  Try
+    System.Seek(f,Filesize);
+  Except
+    On E : Exception do
+      HandleException(e,'tPlyFile.Seek_Eof');
+  End;
 end;
 
 Function  tPlyFile.DosRead(Var Daten) : Boolean;
-Var NumRead                  : integer;
+Var NumRead : integer;
 begin
+  Result := False;
   if not(Eof) then
   begin
-    {$I-}
-    System.BlockRead(f,Daten,1,NumRead); (* 1 = Read 1 record *)
-    {$I+}
-    FileLastError := IoResult;
-    Result  := (FileLastError=0);
-  end else
-  begin
-    FileLastError := 38;   // 38 : End of File
-    Result := False;
+    Try
+      System.BlockRead(f,Daten,1,NumRead); (* 1 = Read 1 record *)
+      Success;
+      Result := True;
+    Except
+      On E : Exception do
+        HandleException(e,'tPlyFile.Seek');
+    End;
   end;
 end;
 
-Function  tPlyFile.BlockRead(Var Daten; RecCount:tFileRecCount; Out ReadRec:tFileRecCount) : Boolean;
+Function  tPlyFile.DosWrite(Var Daten) : Boolean;
+Var NumWritten : tFileRecCount;
+begin
+  Result := False;
+  Try
+    System.BlockWrite(f,Daten,1,NumWritten);
+    Success;
+    Result := True;
+  Except
+    On E : Exception do
+      HandleException(e,'tPlyFile.Seek');
+  End;
+end;
+
+Function  tPlyFile.BlockRead(Var Daten; RecCount:tFileRecCount;
+            Out ReadRec:tFileRecCount) : Boolean;
 Var CountByte                : Int64;
     Steps                    : Int64;
     RecCountStep             : Int64;
@@ -412,26 +592,25 @@ Var CountByte                : Int64;
     Count_Steps              : Longint;
     DatenPtr                 : PAnsiChar;
 begin
-  Result := False;
-  ReadRec   := 0;
+  Result  := False;
+  ReadRec := 0;
   if not(Eof) then
   begin
     CountByte := RecCount * RecSize;
     // if less then 16 MByte to read
     if (CountByte<=_BlockRead_MaxByte) then
     begin
-      {$I-}
-      System.BlockRead(f,Daten,RecCount,ReadRec);
-      {$I+}
-      FileLastError := IOResult;
-      if (FileLastError<>0) then
-      begin
-        ShowFileErrorMessage('tPlyFile.BlockRead'
-          ,FileName
-          ,'RecCount: '+IntToString(RecCount,5)+'  RecSize: ' +IntToString(RecSize,5)
-          +'ReadRec : '+IntToString(ReadRec,5) +'  FileSize: '+IntToString(Filesize,5));
-      end;
-      if (ReadRec>0) then Result := True;
+      Try
+        System.BlockRead(f,Daten,RecCount,ReadRec);
+        if (ReadRec>0) then
+        begin
+          Success;
+          Result := True;
+        end;
+      Except
+        On E : Exception do
+          HandleException(e,'tPlyFile.BlockRead');
+      End;
     end else
     // if more then 16 MByte to read
     begin
@@ -440,50 +619,37 @@ begin
       // Calculate steps of 16 MByte to read
       Steps := (CountByte Div _BlockRead_MaxByte) + 1;
       // Calculate number of records per step
-      RecCountStep := (RecCount Div Steps) + 1;
-
+      RecCountStep  := (RecCount Div Steps) + 1;
       ReadRec_Total := 0;
       Count_Steps   := 0;
       Repeat
         inc(Count_Steps);
         RecCountStep := Min(RecCountStep,RecCount-ReadRec_Total);
-        {$I-}
-        System.BlockRead(f,DatenPtr[ReadRec_Total*RecSize],RecCountStep,ReadRec);
-        {$I+}
-        FileLastError := IOResult;
-        if (FileLastError=0) then
-        begin
+        Try
+          System.BlockRead(f,DatenPtr[ReadRec_Total*RecSize],RecCountStep,ReadRec);
           ReadRec_Total := ReadRec_Total + ReadRec;
-        end;
-      until (Count_Steps>=Steps) or (ReadRec_Total>=RecCount) or (FileLastError<>0);
-      if (FileLastError<>0) then
-      begin
-        ShowFileErrorMessage('tPlyFile.BlockRead Steps'
-          ,FileName
-          ,'RecCount: '+IntToString(RecCount,5)+'  RecSize: ' +IntToString(RecSize,5)
-          +'ReadRec : '+IntToString(ReadRec,5) +'  FileSize: '+IntToString(Filesize,5));
-      end;
+        Except
+          On E : Exception do
+            HandleException(e,'tPlyFile.BlockRead.Steps');
+        End;
+      until (Count_Steps>=Steps) or (ReadRec_Total>=RecCount) or (ErrorCode<>0);
       // Return how many records are read in total
       ReadRec := ReadRec_Total;
-      if (ReadRec>0) then Result := True;
+      if (ReadRec>0) and (ErrorCode=0) then
+      begin
+        Success;
+        Result := True;
+      end;
     end;
   end else
   begin
-    FileLastError := 38;  // 38 : End of File
+    // 38 : End of File
+    // CreateError(ERROR_HANDLE_EOF,SEndOfFile,'tPlyFile.BlockRead');
   end;
 end;
 
-Function  tPlyFile.DosWrite(Var Daten) : Boolean;
-Var NumWritten               : tFileRecCount;
-begin
-  {$I-}
-  System.BlockWrite(f,Daten,1,NumWritten);
-  {$I+}
-  FileLastError := IoResult;
-  DosWrite := (FileLastError=0);
-end;
-
-Function  tPlyFile.BlockWrite(Var Daten; RecCount:tFileRecCount; Out WrittenRec:tFileRecCount) : Boolean;
+Function  tPlyFile.BlockWrite(Var Daten; RecCount:tFileRecCount;
+            Out WrittenRec:tFileRecCount) : Boolean;
 Var CountByte                : Int64;
     Steps                    : Int64;
     AnzRec_Step              : Int64;
@@ -491,24 +657,23 @@ Var CountByte                : Int64;
     Count_Steps              : Longint;
     DatenPtr                 : PAnsiChar;
 begin
-  Result := False;
+  Result     := False;
   WrittenRec := 0;
   CountByte := RecCount * RecSize;
   (* if less then 16 MByte to write *)
   if (CountByte<=_BlockWrite_MaxByte) then
   begin
-    {$I-}
-    System.BlockWrite(f,Daten,RecCount,WrittenRec);
-    {$I+}
-    FileLastError := IOResult;
-    if (FileLastError<>0) then
-    begin
-        ShowFileErrorMessage('tPlyFile.BlockWrite'
-          ,FileName
-          ,'RecCount: '+IntToString(RecCount,5)   +'  RecSize: ' +IntToString(RecSize,5)
-          +'ReadRec : '+IntToString(WrittenRec,5) +'  FileSize: '+IntToString(Filesize,5));
-    end;
-    if (RecCount=WrittenRec) then Result := True;
+    Try
+      System.BlockWrite(f,Daten,RecCount,WrittenRec);
+      if (RecCount=WrittenRec) then
+      begin
+        Success;
+        Result := True;
+      end;
+    Except
+      On E : Exception do
+        HandleException(e,'tPlyFile.BlockWrite');
+    End;
   end else
   (* if more then 16 MByte to write *)
   begin
@@ -522,40 +687,22 @@ begin
     Repeat
       inc(Count_Steps);
       AnzRec_Step := Min(AnzRec_Step,RecCount-WriteRec_Total);
-      {$I-}
-      System.BlockWrite(f,DatenPtr[WriteRec_Total*RecSize],AnzRec_Step,WrittenRec);
-      {$I+}
-      FileLastError := IOResult;
-      if (FileLastError=0) then
-      begin
+      Try
+        System.BlockWrite(f,DatenPtr[WriteRec_Total*RecSize],AnzRec_Step,WrittenRec);
         WriteRec_Total := WriteRec_Total + WrittenRec;
-      end;
-    until (Count_Steps>=Steps) or (WriteRec_Total>=RecCount) or (FileLastError<>0);
-    if (FileLastError<>0) then
-    begin
-      ShowFileErrorMessage('tPlyFile.BlockWrite Steps'
-        ,FileName
-        ,'RecCount: '+IntToString(RecCount,5)   +'  RecSize: ' +IntToString(RecSize,5)
-        +'ReadRec : '+IntToString(WrittenRec,5) +'  FileSize: '+IntToString(Filesize,5));
-    end;
+      Except
+        On E : Exception do
+          HandleException(e,'tPlyFile.BlockWrite.Steps');
+      End;
+    until (Count_Steps>=Steps) or (WriteRec_Total>=RecCount) or (ErrorCode<>0);
     (* Set Out-Parameter *)
     WrittenRec := WriteRec_Total;
     if (WrittenRec=RecCount) then
     begin
-      BlockWrite := True;
-    end else
-    begin
-      ShowFileErrorMessage('tPlyFile.BlockWrite Steps'
-        ,FileName
-        ,'RecCount: '+IntToString(RecCount,5)   +'  RecSize: ' +IntToString(RecSize,5)
-        +'ReadRec : '+IntToString(WrittenRec,5) +'  FileSize: '+IntToString(Filesize,5));
+      Success;
+      Result := True;
     end;
   end;
-end;
-
-Procedure tPlyFile.Seek_Eof;
-begin
-  System.Seek(f,Filesize);
 end;
 
 Function  tPlyFile.Seek_Read(FPos:Longint; Var Daten) : Boolean;
@@ -566,7 +713,7 @@ begin
     Result := DosRead(Daten);
   end else
   begin
-    FileLastError := 100; (* Disk Read Error *)
+    CreateError(IOERROR_DISK_READ,SFileReadError,'tPlyFile.Seek_Read');
     Result := False;
   end;
 end;
@@ -579,50 +726,46 @@ begin
     Result := DosWrite(Daten);
   end else
   begin
-    FileLastError := 101; (* Disk Write Error *)
+    CreateError(IOERROR_DISK_WRITE,SFileWriteError,'tPlyFile.Seek_Write');
     Result := False;
   end;
 end;
 
 Procedure tPlyFile.Truncate;
 begin
-  {$I-}
-  System.Truncate(f);
-  {$I+}
-  FileLastError := IoResult;
-  if (FileLastError<>0) then
-  begin
-    ShowFileErrorMessage('tPlyFile.Truncate',FileName
-      ,'FileSize_Byte : '+FileSizeByte(FileName).ToString);
-  end;
+  Try
+    System.Truncate(f);
+  Except
+    On E : Exception do
+      HandleException(e,'tPlyFile.Truncate');
+  End;
 end;
 
 Function  tPlyFile.Erase : Boolean;
 begin
-  {$I-}
-  System.Erase(f);
-  {$I+}
-  FileLastError := IoResult;
-  if (FileLastError<>0) and  // Success
-     (FileLastError<>5) then // File is still opened by another user
-  begin
-    ShowFileErrorMessage('tPlyFile.Erase',FileName
-      ,'FileSize_Byte : '+FileSizeByte(FileName).ToString);
-  end;
-  Result := (FileLastError=0);
+  Result := False;
+  Try
+    System.Erase(f);
+    Success;
+    Result := True;
+  Except
+    // ErrorCode=5: File is still opened by another task/user
+    On E : Exception do
+      HandleException(e,'tPlyFile.Erase');
+  End;
 end;
 
-Procedure tPlyFile.Rename(NewName:String);
+Function  tPlyFile.Rename(NewFileName:String) : Boolean;
 begin
-  {$I-}
-  System.Rename(f,NewName);
-  {$I+}
-  FileLastError := IoResult;
-  if (FileLastError<>0) then
-  begin
-    ShowFileErrorMessage('tPlyFile.Rename',FileName
-      ,'FileSize_Byte : '+FileSizeByte(FileName).ToString);
-  end;
+  Result := False;
+  Try
+    System.Rename(f,NewFileName);
+    Success;
+    Result := True;
+  Except
+    On E : Exception do
+      HandleException(e,'tPlyFile.Rename');
+  End;
 end;
 
 Function  tPlyFile.DeleteRecord(FPosRecord:Longint) : Boolean;
@@ -662,31 +805,116 @@ begin
   end;
 end;
 
-Procedure tPlyFile.Close;
+Function  tPlyFile.Close : Boolean;
 begin
   if (IsOpen) then
   begin
-    {$I-}
-    System.CloseFile(f);
-    {$I+}
-    FileLastError := IoResult;
-    if (FileLastError<>0) then
+    Result := False;
+    Try
+      System.CloseFile(f);
+      Success;
+      Result := True;
+    Except
+      On E : Exception do
+        HandleException(e,'tPlyFile.Close');
+    End;
+  end else Result := True;
+end;
+
+Function  tPlyFile.Close_Delete : Boolean;
+begin
+  if (Close) then
+  begin
+    Result := Erase;
+  end else Result := False;
+end;
+
+Function  tPlyFile.Close_Rename(NewFileName:String) : Boolean;
+Var OldFileName : String;
+begin
+  Result := False;
+  OldFileName := Filename;
+  if (Close) then
+  begin
+    Result := True;
+    if (NewFileName<>'')          and 
+       (NewFileName<>OldFileName) then
     begin
-      ShowFileErrorMessage('tPlyFile.Close',FileName
-        ,'FileSize_Byte : '+FileSizeByte(FileName).ToString);
+      Result := Rename(NewFileName);
     end;
   end;
 end;
 
-Procedure tPlyFile.Close_Delete;
+(************************)
+(***** tPlyTextfile *****)
+(************************)
+Procedure tPlyTextfile.Success;
 begin
-  Close;
-  Erase;
+  FErrorCode := 0;
+  FErrorMessage := '';
 end;
 
-(***********************************)
-(***** TTextfile - Declaration *****)
-(***********************************)
+Procedure tPlyTextfile.CreateError(eErrorCode:Integer; eErrorMsg:String;
+            eFuncName:String; ePath:String='');
+begin
+  if (ePath='') then ePath := FileName;
+  FErrorCode := eErrorCode;
+  FErrorMessage := FErrorCode.ToString + '│'
+                 + eErrorMsg           + '│'
+                 + eFuncName           + '│'
+                 + '[' + ePath + ']';
+  DebugShowError(eFuncName,ePath,FErrorMessage);
+end;
+
+Procedure tPlyTextfile.HandleException(eException: TObject; Const eFuncName:String;
+            ePath:String='');
+begin
+  if (ePath='') then ePath := FileName;
+  if (Exception(eException).ClassNameIs('EInOutError')) then
+  begin
+    FErrorCode := EInOutError(eException).ErrorCode;
+    FErrorMessage := EInOutError(eException).ErrorCode.ToString + '│';
+    case FErrorCode of
+      ERROR_PATH_NOT_FOUND    : FErrorMessage := FErrorMessage + SPathNotFound + '│';
+      ERROR_SHARING_VIOLATION : FErrorMessage := FErrorMessage + SSharingViolation + '│';
+    else
+      FErrorMessage := FErrorMessage + EInOutError(eException).Message + '│';
+    end;
+    FErrorMessage := FErrorMessage + eFuncName;
+    {$IFDEF DELPHI10UP}
+    if (EInOutError(eException).Path<>'')
+       then FErrorMessage := FErrorMessage + '│' + EInOutError(eException).Path else
+    {$ENDIF DELPHI10UP}
+    if (ePath<>'')
+       then FErrorMessage := FErrorMessage + '│' + ePath;
+  end else
+  begin
+    FErrorCode := 0;
+    FErrorMessage := Exception(eException).Message + '│'
+                   + eFuncName;
+    if (ePath<>'')
+       then FErrorMessage := FErrorMessage + '│' + ePath;
+  end;
+  DebugShowError(eFuncName,ePath,FErrorMessage);
+end;
+
+Procedure tPlyTextfile.DebugShowError(Title,aFileName,Msg1:String; Msg2:String='');
+begin
+  if (FileDebugMode) then
+  begin
+    {$IFDEF CONSOLE}
+      ConsoleShowError('Error['+IntToStr(ErrorCode)+']: '+Title
+        ,'FileName: '+aFileName,Msg1,Msg2);
+    {$ELSE}
+      ShowMessage(Title+sLineBreak
+        +'Error('+IntToStr(ErrorCode)+')'+sLineBreak
+        +'FileName: '+FileName+sLineBreak
+        +Msg1+sLineBreak
+        +Msg2+sLineBreak);
+    {$ENDIF}
+  end;
+end;
+
 Function  tPlyTextfile.GetFilename : String;
 begin
   Result := StrPas(tTextRec(tf).Name);
@@ -695,6 +923,8 @@ end;
 Procedure tPlyTextfile.Init;
 begin
   FillChar(tTextrec(tf),sizeof(tTextrec),#0);
+  FErrorCode := 0;
+  FErrorMessage := '';
 end;
 
 Function  tPlyTextfile.Handle : tHandle;
@@ -702,229 +932,239 @@ begin
   Result := tTextRec(tf).Handle;
 end;
 
-Function  tPlyTextfile.Mode : TFileModeStatus;
+Function  tPlyTextfile.FileModeStatus : TFileModeStatus;
 begin
   Result := tTextRec(tf).Mode;
 end;
 
-Function  tPlyTextfile.GetFilemode : String;
+Function  tPlyTextfile.FileModeStatusText : String;
 begin
-  if (Mode=fmclosed) then Result := 'Closed' else
-  if (Mode=FMINPUT)  then Result := 'Input ' else
-  if (Mode=FMOUTPUT) then Result := 'Output' else
-  if (Mode=FMINOUT)  then Result := 'InOut '
-                     else Result := Mode.ToString;
+  case FileModeStatus of
+    fmclosed : Result := 'Closed';
+    fmInput  : Result := 'Input ';
+    fmOutput : Result := 'Output';
+    fmInOut  : Result := 'InOut ';
+  else
+    Result := IntToString(FileModeStatus,6);
+  end;
 end;
 
 Function  tPlyTextfile.IsOpen : Boolean;
+Var CurFileModeStatus : Word;
 begin
-  if (Mode=FMINPUT)  or
-     (Mode=FMOUTPUT) or
-     (Mode=FMINOUT)  then Result := True
-                     else Result := False;
+  CurFileModeStatus := FileModeStatus;
+  Result := (CurFileModeStatus>=fmInput) and (CurFileModeStatus<=fmInOut);
 end;
 
-Function  tPlyTextfile.Open_Read_Filemode(DName:String; FM:Byte) : Boolean;
+Function  tPlyTextfile.OpenReadFilemode(aFileName:String;
+            aFileModeOpen:TFileModeOpen) : Boolean;
 begin
-  if (DName<>'') then
+  Result := False;
+  if (aFileName<>'') then
   begin
-    FileLastError := 0;
-    if (FileExists(DName)) then
-    begin
-      System.Assign(tf,DName);
-      System.Filemode := FM;
-      {$I-}
+    Try
+      System.AssignFile(tf,aFileName);
+      System.Filemode := aFileModeOpen;
       System.Reset(tf);
-      {$I+}
-      FileLastError := IoResult;
-    end else
-    begin
-      System.Assign(tf,DName);
-      System.Filemode := FM;
-      {$I-}
-      System.Rewrite(tf);
-      {$I+}
-      FileLastError := IoResult;
-    end;
-  end else FileLastError := 2;
-  Result := (FileLastError=0);
-end;
-
-Function  tPlyTextfile.Open_Read(DName:String) : Boolean;
-begin
-  Result := Open_Read_Filemode(DName,fmShare);
-end;
-
-Function  tPlyTextfile.Open_Read_Exklusiv(DName:String) : Boolean;
-begin
-  Result := Open_Read_Filemode(DName,fmDenyRW);
-end;
-
-Function  tPlyTextfile.Open_Write_Filemode(DName:String; FM:Byte;
-            UTF8_Bom:Boolean=False) : Boolean;
-begin
-  if (DName<>'') then
+      Success;
+      Result := True;
+    Except
+      On E : Exception do
+        HandleException(e,'tPlyTextfile.OpenReadFilemode');
+    End;
+  end else
   begin
-    FileLastError := 0;
-    if (FileExists(DName)) then
-    begin
-      System.Assign(tf,DName);
-      System.Filemode := FM;
-      {$I-}
-      System.Append(tf);
-      {$I+}
-      FileLastError := IoResult;
-    end else
-    begin
-      System.Assign(tf,DName);
-      System.Filemode := FM;
-      {$I-}
-      System.Rewrite(tf);
-      (* Wenn die Datei in UFT8 erstellt werden soll, dann Byte Order Mark *)
-      (* (BOM) in die Datei schreiben                                      *)
-      if (UTF8_Bom) then
+    CreateError(ERROR_FILE_NOT_FOUND,SFileNotFound
+      ,'tPlyTextfile.OpenReadFilemode','no filename');
+  end;
+  System.FileMode := fmRW_Share;
+end;
+
+Function  tPlyTextfile.OpenRead(aFileName:String) : Boolean;
+begin
+  Result := OpenReadFilemode(aFileName,fmR_Share);
+end;
+
+Function  tPlyTextfile.OpenReadExclusive(aFileName: string): Boolean;
+begin
+  Result := OpenReadFilemode(aFileName,fmR_DenyRW);
+end;
+
+Function  tPlyTextfile.OpenWriteFilemode(aFileName:String;
+            aFileModeOpen: TFileModeOpen;
+            UTF8_Bom: Boolean=False) : Boolean;
+begin
+  Result := False;
+  if (aFileName<>'') then
+  begin
+    Try
+      System.AssignFile(tf,aFileName);
+      System.Filemode := aFileModeOpen;
+      if (FileExists(aFileName)) then
       begin
-        System.Write(tf,#$ef + #$bb + #$bf);
+        System.Append(tf);
+      end else
+      begin
+        System.Rewrite(tf);
+        // If the file is to be created in UFT8, then write Byte Order Mark (BOM) to the file
+        if (UTF8_Bom) then
+        begin
+          System.Write(tf,#$ef + #$bb + #$bf);
+        end;
       end;
-      {$I+}
-      FileLastError := IoResult;
-    end;
-  end else FileLastError := 2;
-  Result := (FileLastError=0);
-end;
-
-Function  tPlyTextfile.Open_Write(DName:String; UTF8_BOM:Boolean=False) : Boolean;
-begin
-  Result := Open_Write_Filemode(DName,fmShare,UTF8_BOM);
-end;
-
-Function  tPlyTextfile.Open_Write_Exklusiv(DName:String) : Boolean;
-begin
-  Result := Open_Write_Filemode(DName,fmDenyRW);
-end;
-
-Function  tPlyTextfile.Create(DName:String; Codepage:Word=_Codepage_850) : Boolean;
-begin
-  if (DName<>'') then
+      Success;
+      Result := True;
+    Except
+      On E : Exception do
+        HandleException(e,'tPlyTextfile.OpenWriteFilemode');
+    End;
+  end else
   begin
-    if (FileExists(DNAme)) then
+    CreateError(ERROR_FILE_NOT_FOUND,SFileNotFound
+      ,'tPlyTextfile.OpenWriteFilemode','no filename');
+  end;
+end;
+
+Function  tPlyTextfile.OpenWrite(aFileName:String;
+            UTF8_BOM:Boolean=False) : Boolean;
+begin
+  Result := OpenWriteFilemode(aFileName,fmW_Share,UTF8_BOM);
+end;
+
+Function  tPlyTextfile.OpenWriteExclusive(aFileName: string;
+            UTF8_BOM: Boolean = False): Boolean;
+begin
+  Result := OpenWriteFilemode(aFileName,fmW_DenyRW);
+end;
+
+Function  tPlyTextfile.Create(aFileName:String; Codepage:Word=_Codepage_850) : Boolean;
+begin
+  if (aFileName<>'') then
+  begin
+    if (FileExists(aFileName)) then
     begin
-      if (DeleteFile(DName)) then
+      if (System.SysUtils.DeleteFile(aFileName)) then
       begin
-        Result := Open_Write(DName,Codepage=_Codepage_UTF8);
+        Result := OpenWrite(aFileName,Codepage=_Codepage_UTF8);
       end else Result := False;
     end else
     begin
-      Result := Open_Write(DName,Codepage=_Codepage_UTF8);
+      Result := OpenWrite(aFileName,Codepage=_Codepage_UTF8);
     end;
   end else Result := False;
-end;
-
-Function  tPlyTextfile.Append : Boolean;
-begin
-  {$I-}
-  System.Append(tf);
-  {$I+}
-  FileLastError := IoResult;
-  Result := (FileLastError=0);
 end;
 
 Function  tPlyTextfile.Eof : Boolean;
 begin
   if (IsOpen) then
   begin
-    {$I-}
-    Result := System.Eof(tf);
-    {$I+}
-    FileLastError := IoResult;
+    Result := False;
+    Try
+      Result := System.Eof(tf);
+      Success;
+    Except
+      On E : Exception do
+        HandleException(e,'tPlyTextfile.Eof');
+    end;
   end else
   begin
-    Result        := True;
-    FileLastError := 103;  // 103 = File not open
-    ShowFileErrorMessage('tPlyTextfile.Eof',FileName,'File not open');
+    CreateError(IOERROR_FILE_NOT_OPEN,SFileNotOpen
+      ,'tPlyTextFile.Eof');
+    Result := True;
   end;
 end;
 
 Function  tPlyTextfile.Readln(Var Help:String) : Boolean;
 begin
-  if not(System.Eof(tf)) then
+  Result := False;
+  if not(Eof) then
   begin
-    {$I-}
-    System.Readln(tf,Help);
-    {$I+}
-    FileLastError := IoResult;
-    Result := (FileLastError=0);
-  end else
-  begin
-    FileLastError := 100;
-    Result := False;
+    Try
+      System.Readln(tf,Help);
+      Success;
+      Result := True;
+    Except
+      On E : Exception do
+        HandleException(e,'tPlyTextfile.Readln');
+    End;
   end;
 end;
 
 Function  tPlyTextfile.Write(Help:String) : Boolean;
 begin
-  {$I-}
-  System.Write(tf,Help);
-  {$I+}
-  FileLastError := IoResult;
-  Result := (FileLastError=0);
+  Result := False;
+  Try
+    System.Write(tf,Help);
+    Success;
+    Result := True;
+  Except
+    On E : Exception do
+      HandleException(e,'tPlyTextfile.Write');
+  End;
 end;
 
 Function  tPlyTextfile.Writeln(Help:String) : Boolean;
 begin
-  {$I-}
-  System.Writeln(tf,Help);
-  {$I+}
-  FileLastError := IoResult;
-  Result  := (FileLastError=0);
+  Result := False;
+  Try
+    System.Writeln(tf,Help);
+    Success;
+    Result := True;
+  Except
+    On E : Exception do
+      HandleException(e,'tPlyTextfile.Writeln');
+  End;
 end;
 
 Function  tPlyTextfile.Erase : Boolean;
 begin
-  {$I-}
-  System.Erase(tf);
-  {$I+}
-  FileLastError := IoResult;
-  Result := (FileLastError=0);
+  Result := False;
+  Try
+    System.Erase(tf);
+    Success;
+    Result := True;
+  Except
+    // ErrorCode=5: File is still opened by another task/user
+    On E : Exception do
+      HandleException(e,'tPlyTextfile.Erase');
+  End;
 end;
 
 Function  tPlyTextfile.Rename(NewName:String) : Boolean;
-begin
-  {$I-}
-  System.Rename(tf,NewName);
-  {$I+}
-  FileLastError := IoResult;
-  if (FileLastError=0) then Result := True else
-  begin
-    Result := False;
-    ShowFileErrorMessage('tPlyTextfile.Rename',FileName,'ErrorCode: '+FileLastError.ToString);
-  end;
+begin 
+  Result := False;
+  Try
+    System.Rename(tf,NewName);
+    Success;
+    Result := True;
+  Except
+    On E : Exception do
+      HandleException(e,'tPlyTextFile.Rename');
+  End;
 end;
 
-Procedure tPlyTextfile.Close_System;
+Function  tPlyTextfile.Close : Boolean;
 begin
-  // Execute only when file is open
   if (IsOpen) then
   begin
-    {$I-}
-    System.Close(tf);
-    {$I+}
-    FileLastError := IoResult;
-  end else
+    Result := False;
+    Try
+      System.CloseFile(tf);
+      Success;
+      Result := True;
+    Except
+      On E : Exception do
+        HandleException(e,'tPlyTextFile.Close');
+    End;
+  end else Result := True;
+end;
+
+Function  tPlyTextfile.Close_Delete : Boolean;
+begin
+  if (Close) then
   begin
-    FileLastError := 103; // 103 = File not open
-  end;
-end;
-
-Procedure tPlyTextfile.Close;
-begin
-  Close_System;
-end;
-
-Procedure tPlyTextfile.Close_Delete;
-begin
-  Close_System;
-  Erase;
+    Result := Erase;
+  end else Result := False;
 end;
 
 end.

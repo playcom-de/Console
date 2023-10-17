@@ -2,7 +2,7 @@
 
   Name          : Ply.Types.pas
   Copyright     : © 1999 - 2023 Playcom Software Vertriebs GmbH
-  Last modified : 02.08.2023
+  Last modified : 04.09.2023
   License       : disjunctive three-license (MPL|GPL|LGPL) see License.md
   Description   : This file is part of the Open Source "Playcom Console Library"
 
@@ -62,21 +62,27 @@ Const _Codepage_IBM_PC       = 437;
       _KeyboardLayout_de_LI  = $1407;  (* #5127 - Liechtenstein               *)
       _KeyboardLayout_en_KH  = $3C09;  (* #15369 - Hong Kong                  *)
 
-Const FM_R        = $00; (* #00 Filemode read only                            *)
-      FM_W        = $01; (* #01 Filemode write only                           *)
-      FM_RW       = $02; (* #02 Filemode read & write = Standard              *)
+Const FM_R        = $00; // #00 = fmOpenRead       | Filemode read only
+      FM_W        = $01; // #01 = fmOpenWrite      | Filemode write only
+      FM_RW       = $02; // #02 = fmOpenReadWrite  | Filemode read & write = Standard
+      FM_DEL      = $04; // #04 = fmExclusive      | Filemode delete = allow delete & rename
 
-      FM_Deny_Dos = $00; (* #00 Compatibility mode, no protection             *)
-      FM_Deny_RW  = $10; (* #16 deny read & write (prohibited by others)      *)
-      FM_Deny_W   = $20; (* #32 allow read, deny write (by others)            *)
-      FM_Deny_R   = $30; (* #48 Does not work, deny read & allow write        *)
-      FM_Deny_No  = $40; (* #64 allow read & write (protect by record locking)*)
+      FM_Deny_Dos = $00; // #00 = fmShareCompat    | Compatibility mode, no protection
+      FM_Deny_RW  = $10; // #16 = fmShareExclusive | deny read & write (prohibited by others)
+      FM_Deny_W   = $20; // #32 = fmShareDenyWrite | allow read, deny write (by others)
+      FM_Deny_R   = $30; // #48 = fmShareDenyRead  | Does not work, deny read & allow write
+      FM_Deny_No  = $40; // #64 = fmShareDenyNone  | allow read & write (protect by record locking)
 
-      fmDenyRW    = FM_RW+FM_Deny_RW; (* $12 = #18 = exclusiv, deny RW        *)
-      fmDenyW     = FM_RW+FM_Deny_W;  (* $22 = #34 = exclusiv, deny W         *)
-      // nwDenyR  = FM_RW+FM_Deny_R;  (* $32 = #50 = exclusiv, deny R         *)
-      fmShareR    = FM_R +FM_Deny_No; (* $40 = #64                            *)
-      fmShare     = FM_RW+FM_Deny_No; (* $42 = #66 = standard                 *)
+      fmR_DenyRW  = FM_R  + FM_Deny_RW; // $10 = #16 = Read only   │ deny Read & Write
+      fmW_DenyRW  = FM_W  + FM_Deny_RW; // $11 = #17 = Write only  │ deny Read & Write
+      fmRW_DenyRW = FM_RW + FM_Deny_RW; // $12 = #18 = Read & Write│ deny Read & Write
+      fmR_DenyW   = FM_R  + FM_Deny_W;  // $20 = #32 = Read only   │ deny Write
+      fmW_DenyW   = FM_W  + FM_Deny_W;  // $21 = #33 = Write only  │ deny Write
+      fmRW_DenyW  = FM_RW + FM_Deny_W;  // $22 = #34 = Read & Write│ deny Write
+   // nwRW_DenyR  = FM_RW + FM_Deny_R;  // $32 = #50 = Read & Write│ deny Read - Does not work
+      fmR_Share   = FM_R  + FM_Deny_No; // $40 = #64 = Read only   │ deny none
+      fmW_Share   = FM_W  + FM_Deny_No; // $41 = #65 = Write only  │ deny none
+      fmRW_Share  = FM_RW + FM_Deny_No; // $42 = #66 = Read & Write│ deny none - Default
 
 Const _CP850_Umlaut_a        = #132;
       _CP850_Umlaut_o        = #148;
@@ -245,6 +251,7 @@ Type
   TFilesort               = (NameUp, NameDown, ExtensionUp, ExtensionDown,
                              SizeUp, SizeDown, DateTimeUp,  DateTimeDown);
 
+Function  GetCharset(aCodepage:tCodepage) : String;
 Procedure FillWord(Var Dest; Count:Integer; Value:Word);
 Procedure FillLongword(Var Dest; Count:Integer; Value:Longword);
 
@@ -378,8 +385,39 @@ Type
     3: (SmallRect:TConsoleWindowRect);
   end;
 
-Type TBooleanList = TList<Boolean>;
-Type TIntegerList = TList<Integer>;
+  TBooleanList = TList<Boolean>;
+  TIntegerList = TList<Integer>;
+
+  TData64 = Record
+  Private
+    Procedure Clear;
+    Function  GetBinary : String;
+    Function  GetBinaryBytes : String;
+    Function  GetHex : String;
+    Procedure PlusEpsilon;
+    Procedure MinusEpsilon;
+  Public
+    class operator Implicit(Value: Word): TData64;
+    class operator Implicit(Value: TData64): Word;
+    class operator Implicit(Value: Longword): TData64;
+    class operator Implicit(Value: TData64): Longword;
+    class operator Implicit(Value: Integer): TData64;
+    class operator Implicit(Value: TData64): Integer;
+    Property  ToBin      : String   Read GetBinary;
+    Property  ToBinBytes : String   Read GetBinaryBytes;
+    Property  ToHex      : String   Read GetHex;
+    Function  DoubleDigits(Digits: Integer) : Integer;
+    Procedure DoubleRound;
+  case Integer of
+    0: (AsInt64: Int64);
+    1: (AsUInt64: UInt64);
+    2: (AsDouble: Double);
+    3: (AsComp: Comp);
+    4: (AsCurrency: Currency);
+    5: (LoLong, HiLong: Longword);
+    6: (Words : Array [0..3] of Word);
+    7: (Bytes : Array [0..7] of Byte);
+  end;
 
 {$IFDEF DELPHI10UP}
 Type TBooleanListHelper = Class Helper for TBooleanList
@@ -448,8 +486,8 @@ type TAppender<T> = class
        class procedure Append(var Arr: TArray<T>; Value: T);
      end;
 
-Var PlyCompanyName : String = 'Playcom';
-    PlyAppName : String = '';
+Var PlyCompanyName   : String  = 'Playcom';
+    PlyAppName       : String  = '';
 
 implementation
 
@@ -458,6 +496,30 @@ Uses
   Ply.StrUtils,
   System.Math,
   System.SysUtils;
+
+Function  GetCharset(aCodepage:tCodepage) : String;
+begin
+  Case aCodepage of
+    _Codepage_437        : Result := 'IBM437';
+    _Codepage_850        : Result := 'IBM850';
+    _Codepage_1252       : Result := 'ANSI';
+    _Codepage_UTF16_LE   : Result := 'UTF-16';
+    _Codepage_UTF16_BE   : Result := 'UTF-16BE';
+    _Codepage_ISO8859_1  : Result := 'ISO-8859-1';
+    _Codepage_ISO8859_2  : Result := 'ISO-8859-2';
+    _Codepage_ISO8859_3  : Result := 'ISO-8859-3';
+    _Codepage_ISO8859_4  : Result := 'ISO-8859-4';
+    _Codepage_ISO8859_5  : Result := 'ISO-8859-5';
+    _Codepage_ISO8859_6  : Result := 'ISO-8859-6';
+    _Codepage_ISO8859_7  : Result := 'ISO-8859-7';
+    _Codepage_ISO8859_8  : Result := 'ISO-8859-8';
+    _Codepage_ISO8859_9  : Result := 'ISO-8859-9';
+    _Codepage_ISO8859_15 : Result := 'ISO-8859-15';
+    _Codepage_UTF8       : Result := 'UTF-8';
+  else
+    Result := 'ASCII';
+  end;
+end;
 
 Procedure FillWord(Var Dest; Count:Integer; Value:Word);
 Var DynWord : TDynWord;
@@ -937,6 +999,92 @@ end;
 Function TPlyConWinSize.ToStringSize : String;
 begin
   Result := SmallRect.ToStringSize;
+end;
+
+(*******************)
+(***** TData64 *****)
+(*******************)
+Procedure TData64.Clear;
+begin
+  AsInt64 := 0;
+end;
+
+Function  TData64.GetBinary : String;
+begin
+  Result := LongwordToBinaryString(HiLong) + LongwordToBinaryString(LoLong);
+end;
+
+Function  TData64.GetBinaryBytes : String;
+Var i : Integer;
+begin
+  Result := ByteToBinaryString(Bytes[7]);
+  for i := 6 downto 0 do
+  begin
+    Result := Result + '.' + ByteToBinaryString(Bytes[i]);
+  end;
+end;
+
+Function  TData64.GetHex : String;
+begin
+  Result := IntToHex(AsUInt64,0);
+end;
+
+Function  TData64.DoubleDigits(Digits: Integer) : Integer;
+begin
+  if IsNan(AsDouble) or IsInfinite(AsDouble)
+     then Result := $100
+     else Result := Trunc(Frac(AsDouble)*IntPower(10, Digits));
+end;
+
+Procedure TData64.DoubleRound;
+begin
+  if (AsDouble>0) then PlusEpsilon else
+  if (AsDouble<0) then MinusEpsilon;
+end;
+
+class operator TData64.Implicit(Value: Word): TData64;
+begin
+  Result.Clear;
+  Result.Words[0] := Value;
+end;
+
+class operator TData64.Implicit(Value: TData64): Word;
+begin
+  Result := Value.Words[0];
+end;
+
+class operator TData64.Implicit(Value: Longword): TData64;
+begin
+  Result.Clear;
+  Result.LoLong := Value;
+end;
+
+class operator TData64.Implicit(Value: TData64): Longword;
+begin
+  Result := Value.LoLong;
+end;
+
+class operator TData64.Implicit(Value: Integer): TData64;
+begin
+  Result.Clear;
+  Result.AsInt64 := Value;
+end;
+
+class operator TData64.Implicit(Value: TData64): Integer;
+begin
+  if (Value.AsInt64<Low(Integer))  then Result := Low(Integer) else
+  if (Value.AsInt64>High(Integer)) then Result := High(Integer)
+                                   else Result := Value.AsInt64;
+end;
+
+Procedure TData64.PlusEpsilon;
+begin
+  inc(asUInt64);
+end;
+
+Procedure TData64.MinusEpsilon;
+begin
+  dec(asUInt64);
 end;
 
 {$IFDEF DELPHI10UP}

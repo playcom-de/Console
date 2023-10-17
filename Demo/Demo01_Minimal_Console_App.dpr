@@ -6,8 +6,7 @@
 
 {$I Ply.Defines.inc}
 
-uses
-  Crt in '..\Crt.pas';
+Uses Crt;
 
 begin
   Console.Window(80,25);

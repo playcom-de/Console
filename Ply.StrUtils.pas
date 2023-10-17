@@ -22,7 +22,8 @@ Uses
 Function  PosRight(SubStr, sString: ShortString) : Integer; Overload;
 Function  PosRight(SubStr, uString: UnicodeString) : Integer; Overload;
 Function  StrCountChar(ch:Char; Help:String) : Longword;
-Function  StrGetNumbers(Help:String) : String;
+Function  StrGetNumbers(uString:String) : String;
+Function  StrGetLetters(uString:String) : String;
 Function  ValidateEmail(Const aEmail: string): Boolean;
 Function  ValidateDate(Const aDate: String) : Boolean;
 
@@ -50,7 +51,9 @@ Function  StringOfChar(ch:Word; Count:Integer) : UnicodeString; Overload;
 
           // Leading Spaces
 Function  IntToString(Value:Int64; Width:Integer=0;
-            ThousendSeperator:WideChar='?') : String;
+            ThousendSeperator:WideChar='?') : String; Overload;
+Function  IntToString(Value:UInt64; Width:Integer=0;
+            ThousendSeperator:WideChar='?') : String; Overload;
           // LZ = Leading Zeros
 Function  IntToStringLZ(Value:Int64; MinDigits:Integer=0) : String;
           // 0Z = Coded String [0..9,A..Z]
@@ -80,6 +83,13 @@ Function  StringDeleteSpaces(sString:ShortString) : ShortString; Overload;
 Function  StringDeleteSpaces(aString:AnsiString) : AnsiString; Overload;
 Function  StringDeleteSpaces(uString:String) : String; Overload;
 
+Function  StringSplit(sString:ShortString; Seperator:ShortString;
+            FieldNumber:Integer=2) : ShortString; Overload;
+Function  StringSplit(aString:RawByteString; Seperator:RawByteString;
+            FieldNumber:Integer=2) : RawByteString; Overload;
+Function  StringSplit(uString:String; Seperator:String=';';
+            FieldNumber:Integer=2) : String; Overload;
+
 Function  BoolToStringJaNein(ABool:Boolean) : String;
 Function  BoolToStringYesNo(ABool:Boolean) : String;
           // if aBool=True, Result aString else empty-String
@@ -90,6 +100,9 @@ Function  BoolToString(aBool:Boolean; TextTrue,TextFalse:String) : String; Overl
 Function  ByteToBinaryString(Value:Byte) : String;
           // 0 = '0000000000000000', 65535 = '1111111111111111'
 Function  WordToBinaryString(Value:Word) : String;
+          // 0          = '00000000000000000000000000000000'
+          // 4294967295 = '11111111111111111111111111111111'
+Function  LongwordToBinaryString(Value:LongWord) : String;
 
 Function  GetCurrentUserName: String;
 Function  GetWindowsUserName : String;
@@ -200,6 +213,7 @@ Function  Str_Unicode_RawByteString(Const uString:UnicodeString) : RawByteString
 Function  Str_Unicode_ShortString(Const uString:UnicodeString) : ShortString;
 
 Function  Guess_UTF8(Const Bytes:TBytes) : Boolean; Overload;
+Function  Guess_UTF8(Const sData:TArray<AnsiChar>) : Boolean; Overload;
 Function  Guess_UTF8(Const aString:RawByteString) : Boolean; Overload;
 
 implementation
@@ -279,22 +293,38 @@ begin
   Result := Help.CountChar(ch);
 end;
 
-Function  StrGetNumbers(Help:String) : String;
-(* Alle Zeichen bis auf 0..9 loeschen *)
-Var Numbers                  : String;
-    i                        : Integer;
+// Delete all characters except 0..9
+Function  StrGetNumbers(uString:String) : String;
+Var i : Integer;
 begin
-  (* Voranstehendes Minus übernehmen *)
-  if (Help[1]='-') then Numbers := '-'
-                   else Numbers := '';
-  for i := low(Help) to high(Help) do
+  Result := '';
+  if (uString<>'') then
   begin
-    if (Help[i] >='0') and (Help[i] <= '9') then
+    // accept the preceding minus
+    if (uString[1]='-') then Result := '-';
+    for i := low(uString) to high(uString) do
     begin
-      Numbers := Numbers + Help[i];
+      if (CharInSet(uString[i],['0'..'9'])) then
+      begin
+        Result := Result + uString[i];
+      end;
     end;
   end;
-  Result := Numbers;
+end;
+
+// Delete all characters except A..Z
+Function  StrGetLetters(uString:String) : String;
+Var i : Integer;
+begin
+  Result := '';
+  uString := PlyUpperCase(uString);
+  for i := low(uString) to high(uString) do
+  begin
+    if (CharInSet(uString[i],['A'..'Z'])) then
+    begin
+      Result := Result + uString[i];
+    end;
+  end;
 end;
 
 Function  ValidateEmail(Const aEmail: string): Boolean;
@@ -483,6 +513,16 @@ begin
   {$WARNINGS ON}
 end;
 
+Function  IntToString(Value:UInt64; Width:Integer=0;
+            ThousendSeperator:WideChar='?') : String;
+begin
+  {$WARNINGS OFF}
+  Result := StringAlignRight(Width,UIntToStr(Value));
+  if (ThousendSeperator<>'?')
+     then Result := Insert_ThousendSeperator(Result,ThousendSeperator);
+  {$WARNINGS ON}
+end;
+
 Function  IntToStringLZ(Value:Int64; MinDigits:Integer=0) : String;
 begin
   Result := StringAlignRight(MinDigits,IntToString(Value,0),'0');
@@ -582,30 +622,36 @@ function  DoubleToString(Number:Double; Width:Integer=0; Comma:Integer=2;
             DecimalSeparator:WideChar='.'; ThousandSeparator:WideChar='?') : String;
 Var PosThousandSeparator : Integer;
 begin
-  {$WARNINGS OFF}
-  Str(Number:0:Comma,Result);
-  {$WARNINGS ON}
-  // If a different DecimalSeparator is specified
-  if (Comma>0) and (DecimalSeparator<>'.') then
-  begin
-    Result := StringReplace(Result,'.',DecimalSeparator,[]);
-  end;
-  // If a ThousandSeparator is specified, insert ThousandSeparator
-  if (ThousandSeparator<>'?') then
-  begin
-    if (Comma>0) then PosThousandSeparator := Pos(DecimalSeparator,Result)-3
-                 else PosThousandSeparator := Length(Result)-2;
-    While (PosThousandSeparator>1) do
+  Try
+    {$WARNINGS OFF}
+    Str(Number:0:Comma,Result);
+    {$WARNINGS ON}
+    // If a different DecimalSeparator is specified
+    if (Comma>0) and (DecimalSeparator<>'.') then
     begin
-      if (Result[PosThousandSeparator-1]>='0') and
-         (Result[PosThousandSeparator-1]<='9') then
-      begin
-        Insert(ThousandSeparator,Result,PosThousandSeparator);
-      end;
-      PosThousandSeparator := PosThousandSeparator - 3;
+      Result := StringReplace(Result,'.',DecimalSeparator,[]);
     end;
-  end;
-  Result := StringAlignRight(Width,Result,' ');
+    // If a ThousandSeparator is specified, insert ThousandSeparator
+    if (ThousandSeparator<>'?') then
+    begin
+      if (Comma>0) then PosThousandSeparator := Pos(DecimalSeparator,Result)-3
+                   else PosThousandSeparator := Length(Result)-2;
+      While (PosThousandSeparator>1) do
+      begin
+        if (Result[PosThousandSeparator-1]>='0') and
+           (Result[PosThousandSeparator-1]<='9') then
+        begin
+          Insert(ThousandSeparator,Result,PosThousandSeparator);
+        end;
+        PosThousandSeparator := PosThousandSeparator - 3;
+      end;
+    end;
+    Result := StringAlignRight(Width,Result,' ');
+  Except
+    if IsNan(Number)      then Result := 'Nan' else
+    if IsInfinite(Number) then Result := 'Inf'
+                          else Result := '???';
+  End;
 end;
 
 Function  DoubleToStringLZ(Number:Double; Width:Integer=0; Comma:Integer=2;
@@ -779,6 +825,93 @@ begin
   Result := StringReplace(uString,WideChar(_NBSP),'',[rfReplaceAll]);
 end;
 
+Function  StringSplit(sString:ShortString; Seperator:ShortString;
+            FieldNumber:Integer=2) : ShortString;
+Var PartString               : ShortString;
+    FieldPos                 : Integer;
+    SeperatorPos             : Integer;
+begin
+  FieldPos := 0;
+  PartString := '';
+  if (sString<>'') and (FieldNumber>0) then
+  begin
+    Repeat
+      inc(FieldPos);
+      SeperatorPos := Pos(Seperator,sString);
+      if (SeperatorPos>0) then
+      begin
+        PartString := Copy(sString,1,SeperatorPos-1);
+        sString    := Copy(sString,SeperatorPos+Length(Seperator),Length(sString));
+      end else
+      begin
+        PartString := sString;
+        sString    := '';
+      end;
+    Until (FieldPos=FieldNumber) or (sString='');
+  end;
+  if (FieldPos=FieldNumber)
+     then Result := PartString
+     else Result := '';
+end;
+
+Function  StringSplit(aString:RawByteString; Seperator:RawByteString;
+            FieldNumber:Integer=2) : RawByteString;
+Var PartString               : RawByteString;
+    FieldPos                 : Integer;
+    SeperatorPos             : Integer;
+begin
+  FieldPos := 0;
+  PartString := '';
+  if (aString<>'') and (FieldNumber>0) then
+  begin
+    Repeat
+      inc(FieldPos);
+      SeperatorPos := Pos(Seperator,aString);
+      if (SeperatorPos>0) then
+      begin
+        PartString := Copy(aString,1,SeperatorPos-1);
+        aString    := Copy(aString,SeperatorPos+Length(Seperator),Length(aString));
+      end else
+      begin
+        PartString := aString;
+        aString    := '';
+      end;
+    Until (FieldPos=FieldNumber) or (aString='');
+  end;
+  if (FieldPos=FieldNumber)
+     then Result := PartString
+     else Result := '';
+end;
+
+Function  StringSplit(uString:String; Seperator:String=';';
+            FieldNumber:Integer=2) : String;
+Var PartString               : String;
+    FieldPos                 : Integer;
+    SeperatorPos             : Integer;
+begin
+  FieldPos   := 0;
+  PartString := '';
+  if (uString<>'') and (FieldNumber>0) then
+  begin
+    Repeat
+      inc(FieldPos);
+      SeperatorPos := Pos(Seperator,uString);
+      if (SeperatorPos>0) then
+      begin
+        PartString := Copy(uString,1,SeperatorPos-1);
+        uString    := Copy(uString,SeperatorPos+Length(Seperator),Length(uString));
+      end else
+      begin
+        PartString := uString;
+        uString    := '';
+      end;
+    Until (FieldPos=Fieldnumber) or (uString='');
+  end;
+  if (FieldPos=Fieldnumber)
+     then Result := PartString
+     else Result := '';
+end;
+
 Function  BoolToStringJaNein(ABool:Boolean) : String;
 begin
   if (ABool) then Result := 'Ja  ' else Result := 'Nein';
@@ -805,7 +938,7 @@ Function  ByteToBinaryString(Value:Byte) : String;
 Var i : integer;
 begin
   Result := '';
-  for i := 0 to (Sizeof(Byte)*8)-1 do
+  for i := 0 to (Sizeof(Value)*8)-1 do
   begin
     Result := ((Value and BitValue32[i]) = BitValue32[i]).ToInteger.ToString + Result;
   end;
@@ -815,7 +948,27 @@ Function  WordToBinaryString(Value:Word) : String;
 Var i : integer;
 begin
   Result := '';
-  for i := 0 to (Sizeof(Word)*8)-1 do
+  for i := 0 to (Sizeof(Value)*8)-1 do
+  begin
+    Result := ((Value and BitValue32[i]) = BitValue32[i]).ToInteger.ToString + Result;
+  end;
+end;
+
+Function  LongwordToBinaryString(Value:LongWord) : String;
+Var i : integer;
+begin
+  Result := '';
+  for i := 0 to (Sizeof(Value)*8)-1 do
+  begin
+    Result := ((Value and BitValue32[i]) = BitValue32[i]).ToInteger.ToString + Result;
+  end;
+end;
+
+Function  UInt64ToBinaryString(Value:UInt64) : String;
+Var i : integer;
+begin
+  Result := '';
+  for i := 0 to (Sizeof(Value)*8)-1 do
   begin
     Result := ((Value and BitValue32[i]) = BitValue32[i]).ToInteger.ToString + Result;
   end;
@@ -2501,7 +2654,7 @@ end;
 Function  Str_Unicode_RawByteString(Const uString:UnicodeString) : RawByteString;
 var
   i : Integer;
-  rString : CP850String;
+  rString : RawByteString;
 begin
   SetLength(rString,length(uString));
   for i := 1 to length(uString) do
@@ -2561,6 +2714,14 @@ begin
      (C3Bytes/TotalBytes>0.002) or
      (E2Bytes/TotalBytes>0.002) then Result := True
                                 else Result := False;
+end;
+
+Function  Guess_UTF8(Const sData:TArray<AnsiChar>) : Boolean;
+Var Bytes : TBytes;
+begin
+  SetLength(Bytes,Length(sData));
+  Move(sData[0],Bytes[0],Length(sData));
+  Result := Guess_UTF8(Bytes);
 end;
 
 Function  Guess_UTF8(Const aString:RawByteString) : Boolean;
